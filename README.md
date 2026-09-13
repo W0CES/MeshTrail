@@ -7,21 +7,6 @@ messages. It is set in 1854 with a light alternate-history twist: wagon parties 
 Long-Range (LoRa) Aether Telegraphs linked by fort relay masts. It runs as an isolated native
 openHop service plugin, using the same Companion TCP integration pattern proven by MeshZork.
 
-At Fort Kearny, players may discover that the local relay is maintained by the volunteer
-Nebraska Mesh Telegraph Cooperative—a period-flavored Easter egg honoring
-[NebraskaMesh.net](https://www.nebraskamesh.net/).
-
-The openHop rabbit also appears as a brass seal on each telegraph set and as a mysterious white
-jackrabbit near significant relay stations.
-
-The plugin logo carries the same story visually: the rabbit rides in the covered wagon, its
-canvas bears the brass Aether Telegraph emblem, a relay mast stands beside the trail, and a
-centered 1854 plate anchors the badge.
-
-The square badge remains available at
-[`meshtrail_plugin/assets/meshtrail-logo.png`](meshtrail_plugin/assets/meshtrail-logo.png) for
-the plugin UI and compact placements.
-
 This is not a copy or port of the commercial Oregon Trail game. The code, simulation, events,
 and writing in this repository are original.
 
