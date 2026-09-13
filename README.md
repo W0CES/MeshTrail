@@ -42,6 +42,7 @@ Each sender prefix gets an independent SQLite-backed wagon party. Send one comma
 - `RATIONS filling|meager|bare`
 - `FORD`, `CAULK`, or `FERRY` - resolve a river crossing when the trail reaches one
 - `RESET` - abandon the current run and start over
+- `GUIDE` - return the beginner guide link
 - `HELP` - show the command list
 
 Travel events are repeatable for a given player, turn, and configured seed. MeshCore delivery
@@ -76,10 +77,11 @@ The default connection is `127.0.0.1:5003`. Runtime data is stored in
 `$OPENHOP_PLUGIN_DATA/meshtrail.sqlite3`. Configuration can be changed in the plugin's
 settings page, in `config.json`, or with matching uppercase environment variables.
 
-Open MeshTrail from the openHop Plugins page to set the maximum number of simultaneous players
-and the idle timeout. An idle player releases their active slot after the configured interval,
-but their SQLite-backed journey remains saved. The defaults are three active players and a
-15-minute timeout.
+Open MeshTrail from the openHop Plugins page to set the maximum number of simultaneous players,
+the idle timeout, and how long inactive saves are retained. An idle player releases their active
+slot after the configured interval, while their SQLite-backed journey remains available until
+the retention period expires. The defaults are three active players, a 15-minute slot timeout,
+and 30 days of save retention.
 
 MeshTrail uses port `5003` so it can coexist with a MeshZork Companion on `5002`. Give each
 plugin its own Companion identity; a Companion accepts only one connected TCP client.
