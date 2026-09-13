@@ -22,6 +22,7 @@ def test_manifest_package_and_defaults_match() -> None:
     assert manifest["ui"] == {"type": "application", "entry": "ui/index.html"}
     assert defaults["max_active_players"] == 3
     assert defaults["active_player_timeout_seconds"] == 900
+    assert defaults["save_retention_days"] == 30
 
 
 def test_packaged_logo_and_container_smoke_files_exist() -> None:
