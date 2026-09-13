@@ -11,6 +11,7 @@
     duplicate_ttl_seconds: 600,
     max_active_players: 3,
     active_player_timeout_seconds: 900,
+    save_retention_days: 30,
     random_seed: 1848,
     log_level: "INFO"
   };
@@ -81,6 +82,7 @@
     const timeoutMinutes = Math.max(1, Math.round(config.active_player_timeout_seconds / 60));
     $("overview-players").textContent = String(config.max_active_players);
     $("overview-timeout").textContent = plural(timeoutMinutes, "minute");
+    $("overview-retention").textContent = plural(config.save_retention_days, "day");
   }
 
   function populateSettings(config) {
@@ -89,6 +91,7 @@
     $("active_player_timeout_minutes").value = String(
       Math.max(1, Math.round(cfg.active_player_timeout_seconds / 60))
     );
+    $("save_retention_days").value = String(cfg.save_retention_days);
     currentConfig = cfg;
     formDirty = false;
     renderOverview(cfg);
@@ -107,11 +110,13 @@
     const timeoutMinutes = integerValue(
       "active_player_timeout_minutes", "Inactivity timeout", 1, 1440
     );
+    const retentionDays = integerValue("save_retention_days", "Save retention", 1, 3650);
     return {
       ...defaults,
       ...cleanConfig(currentConfig),
       max_active_players: players,
-      active_player_timeout_seconds: timeoutMinutes * 60
+      active_player_timeout_seconds: timeoutMinutes * 60,
+      save_retention_days: retentionDays
     };
   }
 
@@ -134,7 +139,7 @@
     }
   }
 
-  ["max_active_players", "active_player_timeout_minutes"].forEach((id) => {
+  ["max_active_players", "active_player_timeout_minutes", "save_retention_days"].forEach((id) => {
     $(id).addEventListener("input", () => {
       formDirty = true;
       setStatus("Unsaved changes", "warn");
@@ -178,3 +183,4 @@
 
   loadConfig(true);
 })();
+
