@@ -5,7 +5,6 @@ import pytest
 
 from scripts.check_release_version import check_release_version
 
-
 ROOT = Path(__file__).parents[1]
 
 
