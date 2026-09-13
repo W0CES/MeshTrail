@@ -28,6 +28,9 @@ Every new party begins with:
 Your progress is saved between messages. If a river interrupts travel, the game waits for your
 choice; it will not silently move past the crossing.
 
+By default, an inactive journey remains saved for 30 days. The openHop administrator can change
+that retention period from the MeshTrail settings page.
+
 ## Commands
 
 | Command | What it does |
@@ -51,6 +54,7 @@ choice; it will not silently move past the crossing.
 | `FERRY` | Pays $25 for a safe, one-day crossing. |
 | `HELP` | Shows the in-game command list. |
 | `RESET` | Abandons the current journey and starts a fresh one. |
+| `GUIDE` | Returns a link to this beginner guide. This works before starting a journey. |
 
 `SUPPLIES` is also available as `INV`, and `STATUS` as `S`. `GO` also accepts `TRAVEL` or
 `CONTINUE`. `?` is a shortcut for `HELP`.
