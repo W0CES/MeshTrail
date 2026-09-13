@@ -60,10 +60,14 @@ class TrailStore:
         database_path: Path | str,
         *,
         duplicate_ttl_seconds: int = 600,
+        max_active_players: int = 3,
+        active_player_timeout_seconds: int = 900,
         random_seed: int = 1848,
     ) -> None:
         self.database_path = Path(database_path)
         self.duplicate_ttl_seconds = duplicate_ttl_seconds
+        self.max_active_players = max_active_players
+        self.active_player_timeout_seconds = active_player_timeout_seconds
         self.random_seed = random_seed
         self._lock = threading.Lock()
         self._initialize()
@@ -145,12 +149,19 @@ class TrailStore:
             if row is None:
                 if normalized not in {"", "start"}:
                     return "MESH TRAIL: Send START to form a wagon party. HELP lists commands."
+                if not self._claim_active_slot(connection, sender_id, now):
+                    return self._busy_message()
                 self._create_session(connection, sender_id, now)
                 return (
                     "MESH TRAIL, 1854. Independence. 5 travelers. Your LoRa Aether Telegraph "
                     "bears a rabbit seal. GO west; RADIO checks the mesh."
                 )
 
+            if not self._claim_active_slot(connection, sender_id, now):
+                return self._busy_message()
+            connection.execute(
+                "UPDATE sessions SET updated_at=? WHERE sender_id=?", (now, sender_id)
+            )
             state = dict(row)
             if normalized in {"", "start", "status"}:
                 return self._status(state)
@@ -181,6 +192,28 @@ class TrailStore:
             if normalized == "go":
                 return self._travel(connection, sender_id, state, now)
             return "Unknown command. Send HELP."
+
+    def _claim_active_slot(
+        self, connection: sqlite3.Connection, sender_id: str, now: int
+    ) -> bool:
+        cutoff = now - self.active_player_timeout_seconds
+        row = connection.execute(
+            "SELECT updated_at FROM sessions WHERE sender_id=?", (sender_id,)
+        ).fetchone()
+        if row is not None and int(row["updated_at"]) >= cutoff:
+            return True
+        active_count = connection.execute(
+            "SELECT COUNT(*) FROM sessions WHERE updated_at>=?", (cutoff,)
+        ).fetchone()[0]
+        return int(active_count) < self.max_active_players
+
+    def _busy_message(self) -> str:
+        minutes = max(1, self.active_player_timeout_seconds // 60)
+        return (
+            f"MeshTrail is busy ({self.max_active_players}/{self.max_active_players} wagon parties). "
+            f"Try again after an idle slot expires in {minutes} minute"
+            f"{'s' if minutes != 1 else ''}; saved journeys are safe."
+        )
 
     @staticmethod
     def _create_session(connection: sqlite3.Connection, sender_id: str, now: int) -> None:
@@ -490,3 +523,4 @@ def fit_utf8(text: str, max_bytes: int) -> str:
         except UnicodeDecodeError:
             clipped = clipped[:-1]
     return suffix[:max_bytes]
+
