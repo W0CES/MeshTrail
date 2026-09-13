@@ -127,6 +127,21 @@ The repository includes `tests/Dockerfile.smoke`. CI builds the wheel in clean
 `python:3.12-slim`, installs it with dependencies, checks the packaged logo, plays through the
 first river crossing, and reopens the SQLite save from a new game instance.
 
+## Releases and openHop updates
+
+MeshTrail publishes installable wheels as GitHub Release assets. To publish a release, first make
+sure the version in `pyproject.toml`, `openhop-plugin.json`, and `meshtrail_plugin/__init__.py`
+matches, then create and push a canonical tag such as `v0.3.0`. The **Publish Release Wheel**
+workflow verifies the tag, runs the Python and Docker test suites, builds the wheel, and attaches
+both the wheel and a ZIP bundle to the matching GitHub Release. It can also be rerun manually for
+an existing tag from the repository's Actions page.
+
+OpenHop's update check is catalogue-managed. Once MeshTrail is approved in the openHop plugin
+catalogue and installed from there, openHop compares the installed version with the catalogue's
+approved version and offers the update from its Plugins page. Publishing a GitHub Release alone
+does not make that version available through openHop; the catalogue entry must also be updated
+with the release wheel URL and SHA-256 checksum.
+
 ## Safety and isolation
 
 The plugin is a supervised child process. A crash or invalid game command cannot replace or
