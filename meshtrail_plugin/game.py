@@ -154,7 +154,7 @@ class TrailStore:
                 self._create_session(connection, sender_id, now)
                 return (
                     "MESH TRAIL, 1854. Independence. 5 travelers. Your LoRa Aether Telegraph "
-                    "bears a rabbit seal. GO west; RADIO checks the mesh."
+                    "bears a rabbit seal. GO west; PING checks the mesh."
                 )
 
             if not self._claim_active_slot(connection, sender_id, now):
@@ -166,10 +166,10 @@ class TrailStore:
             if normalized in {"", "start", "status"}:
                 return self._status(state)
             if normalized == "help":
-                return "GO, STATUS, SUPPLIES, RADIO, BEACON, HUNT, REST, PACE, RATIONS, RESET. At rivers: FORD, CAULK, or FERRY."
+                return "GO, STATUS, SUPPLIES, PING, BEACON, HUNT, REST, PACE, RATIONS, RESET. At rivers: FORD, CAULK, or FERRY."
             if normalized == "supplies":
                 return f"Food {state['food']}lb; ammo {state['ammo']}; parts {state['parts']}; cash ${state['money']}; cells {state['battery']}%; aerial {state['aerial']}%."
-            if normalized == "radio":
+            if normalized in {"ping", "radio"}:
                 return self._radio_status(state)
             if normalized == "beacon":
                 return self._beacon(connection, sender_id, state, now)
