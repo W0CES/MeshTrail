@@ -50,7 +50,7 @@ def test_active_player_limit_expires_without_losing_saves(tmp_path, monkeypatch)
     assert "Kansas River" in restored
 
 
-def test_duplicate_radio_message_is_ignored(tmp_path):
+def test_duplicate_ping_message_is_ignored(tmp_path):
     game = TrailStore(tmp_path / "trail.db")
     game.handle("player", "start", timestamp=1)
     first = game.handle("player", "go", timestamp=2)
@@ -71,11 +71,11 @@ def test_strategy_commands(tmp_path):
 def test_mesh_telegraph_commands_use_cells(tmp_path):
     game = TrailStore(tmp_path / "trail.db")
     game.handle("player", "start", timestamp=1)
-    assert "LoRa Aether Telegraph" in game.handle("player", "radio", timestamp=2)
+    assert "LoRa Aether Telegraph" in game.handle("player", "ping", timestamp=2)
     beacon = game.handle("player", "beacon", timestamp=3)
     assert "BEACON ACK" in beacon
     assert any(operator in beacon for operator in PRAIRIE_MESH_OPERATORS)
-    assert "cells 95%" in game.handle("player", "radio", timestamp=4)
+    assert "cells 95%" in game.handle("player", "ping", timestamp=4)
 
 
 def test_fort_kearny_contains_nebraska_mesh_easter_egg(tmp_path):
@@ -124,3 +124,4 @@ def test_fit_utf8_obeys_packet_budget():
     result = fit_utf8("prairie " * 100, 145)
     assert len(result.encode("utf-8")) <= 145
     assert result.endswith("...")
+
