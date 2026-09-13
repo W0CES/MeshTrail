@@ -1,6 +1,6 @@
 # MeshTrail
 
-![MeshTrail logo](meshtrail_plugin/assets/meshtrail-logo.png)
+![MeshTrail catalog card](meshtrail_plugin/assets/meshtrail-catalog-card.png)
 
 MeshTrail is an original, Oregon Trail-inspired survival game made for short MeshCore direct
 messages. It is set in 1854 with a light alternate-history twist: wagon parties carry experimental
@@ -17,6 +17,10 @@ jackrabbit near significant relay stations.
 The plugin logo carries the same story visually: the rabbit rides in the covered wagon, its
 canvas bears the brass Aether Telegraph emblem, a relay mast stands beside the trail, and a
 centered 1854 plate anchors the badge.
+
+The square badge remains available at
+[`meshtrail_plugin/assets/meshtrail-logo.png`](meshtrail_plugin/assets/meshtrail-logo.png) for
+the plugin UI and compact placements.
 
 This is not a copy or port of the commercial Oregon Trail game. The code, simulation, events,
 and writing in this repository are original.
