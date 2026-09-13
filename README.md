@@ -68,7 +68,12 @@ under plugin ID `openhop.meshtrail`, and the service entrypoint is `meshtrail-op
 
 The default connection is `127.0.0.1:5003`. Runtime data is stored in
 `$OPENHOP_PLUGIN_DATA/meshtrail.sqlite3`. Configuration can be changed in the plugin's
-`config.json` or with matching uppercase environment variables.
+settings page, in `config.json`, or with matching uppercase environment variables.
+
+Open MeshTrail from the openHop Plugins page to set the maximum number of simultaneous players
+and the idle timeout. An idle player releases their active slot after the configured interval,
+but their SQLite-backed journey remains saved. The defaults are three active players and a
+15-minute timeout.
 
 MeshTrail uses port `5003` so it can coexist with a MeshZork Companion on `5002`. Give each
 plugin its own Companion identity; a Companion accepts only one connected TCP client.
