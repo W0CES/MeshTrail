@@ -1,7 +1,7 @@
 import sqlite3
 
 import meshtrail_plugin.game as game_module
-from meshtrail_plugin.game import PRAIRIE_MESH_OPERATORS, TrailStore, fit_utf8
+from meshtrail_plugin.game import PLAYER_GUIDE_URL, PRAIRIE_MESH_OPERATORS, TrailStore, fit_utf8
 
 
 def test_new_player_and_persistent_progress(tmp_path):
@@ -9,6 +9,8 @@ def test_new_player_and_persistent_progress(tmp_path):
     opening = game.handle("aabbcc", "START", timestamp=1)
     assert "Independence" in opening
     assert "rabbit seal" in opening
+    assert "GUIDE" in opening
+    assert len(opening.encode("utf-8")) <= 145
     reply = game.handle("aabbcc", "GO", timestamp=2)
     assert "Kansas River" in reply
     assert "FERRY" in game.handle("aabbcc", "STATUS", timestamp=3)
@@ -48,6 +50,25 @@ def test_active_player_limit_expires_without_losing_saves(tmp_path, monkeypatch)
     now += 901
     restored = game.handle("player1", "status", timestamp=4)
     assert "Kansas River" in restored
+
+
+def test_guide_is_available_without_starting_a_game(tmp_path):
+    game = TrailStore(tmp_path / "trail.db")
+    reply = game.handle("new-player", "guide", timestamp=1)
+    assert PLAYER_GUIDE_URL in reply
+    assert len(reply.encode("utf-8")) <= 145
+
+
+def test_inactive_saves_expire_after_retention_period(tmp_path, monkeypatch):
+    now = 10_000
+    monkeypatch.setattr(game_module.time, "time", lambda: now)
+    game = TrailStore(tmp_path / "trail.db", save_retention_seconds=30 * 86400)
+    game.handle("old-party", "start", timestamp=1)
+    game.handle("old-party", "go", timestamp=2)
+
+    now += 30 * 86400 + 1
+    expired = game.handle("old-party", "status", timestamp=3)
+    assert "Send START" in expired
 
 
 def test_duplicate_ping_message_is_ignored(tmp_path):
