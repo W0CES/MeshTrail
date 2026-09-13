@@ -19,9 +19,15 @@ def test_manifest_package_and_defaults_match() -> None:
     assert manifest["version"] == project["version"] == __version__
     assert defaults["meshcore_host"] == "127.0.0.1"
     assert defaults["meshcore_port"] == 5003
+    assert manifest["ui"] == {"type": "application", "entry": "ui/index.html"}
+    assert defaults["max_active_players"] == 3
+    assert defaults["active_player_timeout_seconds"] == 900
 
 
 def test_packaged_logo_and_container_smoke_files_exist() -> None:
     assert (ROOT / "meshtrail_plugin" / "assets" / "meshtrail-logo.png").is_file()
     assert (ROOT / "scripts" / "container_smoke.py").is_file()
     assert (ROOT / "tests" / "Dockerfile.smoke").is_file()
+    assert (ROOT / "ui" / "index.html").is_file()
+    assert (ROOT / "ui" / "app.js").is_file()
+    assert (ROOT / "ui" / "styles.css").is_file()
