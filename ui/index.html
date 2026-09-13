@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>MeshTrail settings</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <img src="meshtrail-logo.png" alt="MeshTrail logo">
+        <div>
+          <div class="eyebrow">openHop plugin</div>
+          <h1>MeshTrail</h1>
+        </div>
+        <span class="version">v0.2.0</span>
+      </div>
+      <span id="global-status" class="status-pill neutral">
+        <span class="status-dot"></span>Loading
+      </span>
+    </header>
+
+    <main>
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+
+      <section class="card hero">
+        <img class="hero-logo" src="meshtrail-logo.png" alt="">
+        <div>
+          <div class="eyebrow">Wagon traffic controls</div>
+          <h2>Keep the trail moving without crowding the mesh</h2>
+          <p class="muted">Choose how many wagon parties may play at once and how long an
+            idle party keeps its active slot. Saved journeys remain ready for the next trip west.</p>
+        </div>
+        <div class="quick-facts" aria-label="Current MeshTrail limits">
+          <div><span>Active players</span><strong id="overview-players">3</strong></div>
+          <div><span>Idle timeout</span><strong id="overview-timeout">15 minutes</strong></div>
+        </div>
+      </section>
+
+      <form id="settings-form">
+        <div class="page-heading">
+          <div>
+            <span class="eyebrow">Trail capacity</span>
+            <h2>Settings</h2>
+            <p class="muted">Changes are saved through openHop and restart only MeshTrail.</p>
+          </div>
+          <div class="settings-actions">
+            <button id="reload-settings" class="button ghost" type="button">Reload</button>
+            <button id="save-settings" class="button primary" type="submit">Save and restart</button>
+          </div>
+        </div>
+
+        <section class="card settings-section">
+          <div class="form-grid">
+            <label>Maximum active players
+              <input id="max_active_players" type="number" min="1" max="20" step="1" required>
+              <small>Each player controls one independently saved wagon party.</small>
+            </label>
+            <label>Inactivity timeout (minutes)
+              <input id="active_player_timeout_minutes" type="number" min="1" max="1440" step="1" required>
+              <small>An idle player releases a slot without losing their saved journey.</small>
+            </label>
+          </div>
+        </section>
+      </form>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
