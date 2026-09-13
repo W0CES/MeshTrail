@@ -15,6 +15,7 @@ START_FOOD = 1000
 START_AMMO = 50
 START_PARTS = 3
 PARTY_SIZE = 5
+PLAYER_GUIDE_URL = "https://github.com/W0CES/MeshTrail/blob/main/PLAYER_GUIDE.md"
 PACE_MILES = {"steady": 95, "strenuous": 120, "grueling": 145}
 RATION_FOOD = {"filling": 3, "meager": 2, "bare": 1}
 ALIASES = {"travel": "go", "continue": "go", "s": "status", "inv": "supplies", "?": "help"}
@@ -62,12 +63,14 @@ class TrailStore:
         duplicate_ttl_seconds: int = 600,
         max_active_players: int = 3,
         active_player_timeout_seconds: int = 900,
+        save_retention_seconds: int = 30 * 86400,
         random_seed: int = 1848,
     ) -> None:
         self.database_path = Path(database_path)
         self.duplicate_ttl_seconds = duplicate_ttl_seconds
         self.max_active_players = max_active_players
         self.active_player_timeout_seconds = active_player_timeout_seconds
+        self.save_retention_seconds = save_retention_seconds
         self.random_seed = random_seed
         self._lock = threading.Lock()
         self._initialize()
@@ -132,6 +135,10 @@ class TrailStore:
                 "DELETE FROM processed_messages WHERE processed_at < ?",
                 (now - self.duplicate_ttl_seconds,),
             )
+            connection.execute(
+                "DELETE FROM sessions WHERE updated_at < ?",
+                (now - self.save_retention_seconds,),
+            )
             try:
                 connection.execute(
                     "INSERT INTO processed_messages VALUES (?, ?)", (dedupe_key, now)
@@ -146,6 +153,8 @@ class TrailStore:
                 connection.execute("DELETE FROM sessions WHERE sender_id=?", (sender_id,))
                 row = None
                 normalized = "start"
+            if normalized == "guide":
+                return f"MeshTrail beginner guide: {PLAYER_GUIDE_URL}"
             if row is None:
                 if normalized not in {"", "start"}:
                     return "MESH TRAIL: Send START to form a wagon party. HELP lists commands."
@@ -154,7 +163,7 @@ class TrailStore:
                 self._create_session(connection, sender_id, now)
                 return (
                     "MESH TRAIL, 1854. Independence. 5 travelers. Your LoRa Aether Telegraph "
-                    "bears a rabbit seal. GO west; PING checks the mesh."
+                    "bears a rabbit seal. GO west; PING checks the mesh. New here? GUIDE."
                 )
 
             if not self._claim_active_slot(connection, sender_id, now):
@@ -166,7 +175,7 @@ class TrailStore:
             if normalized in {"", "start", "status"}:
                 return self._status(state)
             if normalized == "help":
-                return "GO, STATUS, SUPPLIES, PING, BEACON, HUNT, REST, PACE, RATIONS, RESET. At rivers: FORD, CAULK, or FERRY."
+                return "GO, STATUS, SUPPLIES, PING, BEACON, HUNT, REST, PACE, RATIONS, GUIDE, RESET. Rivers: FORD, CAULK, FERRY."
             if normalized == "supplies":
                 return f"Food {state['food']}lb; ammo {state['ammo']}; parts {state['parts']}; cash ${state['money']}; cells {state['battery']}%; aerial {state['aerial']}%."
             if normalized in {"ping", "radio"}:
