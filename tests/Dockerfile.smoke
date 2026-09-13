@@ -1,0 +1,12 @@
+FROM python:3.12-slim
+
+WORKDIR /src
+COPY . .
+
+RUN python -m pip install --no-cache-dir build \
+    && python -m build --wheel \
+    && python -m pip install --no-cache-dir dist/openhop_meshtrail_plugin-*.whl
+
+WORKDIR /tmp
+RUN python /src/scripts/container_smoke.py
+

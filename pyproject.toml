@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openhop-meshtrail-plugin"
+version = "0.1.0"
+description = "An Oregon Trail-inspired game for MeshCore direct messages"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "MacKayz117" }]
+dependencies = ["openhop-core==1.1.1"]
+
+[project.optional-dependencies]
+dev = ["build>=1.2.1", "pytest>=8.2.0", "pytest-asyncio>=0.23.0", "ruff>=0.6.0"]
+
+[project.scripts]
+meshtrail-openhop = "meshtrail_plugin.service:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["meshtrail_plugin*"]
+
+[tool.setuptools.package-data]
+meshtrail_plugin = ["assets/meshtrail-logo.png"]
+
+[tool.setuptools.data-files]
+"share/openhop/plugins/openhop.meshtrail" = ["openhop-plugin.json", "config.default.json"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

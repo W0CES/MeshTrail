@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": "openhop.meshtrail",
+  "name": "MeshTrail",
+  "version": "0.1.0",
+  "description": "Lead a wagon party west in a compact game built for MeshCore direct messages.",
+  "runtime": {
+    "type": "python",
+    "entrypoint": "meshtrail-openhop"
+  },
+  "config": {
+    "defaults": {
+      "meshcore_host": "127.0.0.1",
+      "meshcore_port": 5003,
+      "max_reply_bytes": 145,
+      "max_command_bytes": 80,
+      "duplicate_ttl_seconds": 600,
+      "random_seed": 1848,
+      "log_level": "INFO"
+    }
+  }
+}
