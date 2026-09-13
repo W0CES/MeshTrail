@@ -1,5 +1,6 @@
 import sqlite3
 
+import meshtrail_plugin.game as game_module
 from meshtrail_plugin.game import PRAIRIE_MESH_OPERATORS, TrailStore, fit_utf8
 
 
@@ -21,6 +22,32 @@ def test_players_are_isolated(tmp_path):
     game.handle("player1", "go", timestamp=2)
     game.handle("player2", "start", timestamp=1)
     assert "0/2000mi" in game.handle("player2", "status", timestamp=2)
+
+
+def test_active_player_limit_expires_without_losing_saves(tmp_path, monkeypatch):
+    now = 10_000
+    monkeypatch.setattr(game_module.time, "time", lambda: now)
+    game = TrailStore(
+        tmp_path / "trail.db", max_active_players=2, active_player_timeout_seconds=900
+    )
+    game.handle("player1", "start", timestamp=1)
+    game.handle("player1", "go", timestamp=2)
+    game.handle("player2", "start", timestamp=1)
+
+    busy = game.handle("player3", "start", timestamp=1)
+    assert "busy (2/2 wagon parties)" in busy
+
+    now += 901
+    opening = game.handle("player3", "start", timestamp=2)
+    assert "Independence" in opening
+    game.handle("player4", "start", timestamp=1)
+
+    busy_return = game.handle("player1", "status", timestamp=3)
+    assert "busy (2/2 wagon parties)" in busy_return
+
+    now += 901
+    restored = game.handle("player1", "status", timestamp=4)
+    assert "Kansas River" in restored
 
 
 def test_duplicate_radio_message_is_ignored(tmp_path):
