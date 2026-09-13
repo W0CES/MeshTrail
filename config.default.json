@@ -4,6 +4,8 @@
   "max_reply_bytes": 145,
   "max_command_bytes": 80,
   "duplicate_ttl_seconds": 600,
+  "max_active_players": 3,
+  "active_player_timeout_seconds": 900,
   "random_seed": 1848,
   "log_level": "INFO"
 }
