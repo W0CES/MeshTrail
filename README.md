@@ -23,12 +23,14 @@ and writing in this repository are original.
 
 ## First playable slice
 
+For a beginner-friendly walkthrough, see [PLAYER_GUIDE.md](PLAYER_GUIDE.md).
+
 Each sender prefix gets an independent SQLite-backed wagon party. Send one command per DM:
 
 - `START` - create a new party
 - `GO` - travel for seven days
 - `STATUS` or `SUPPLIES` - inspect the journey
-- `RADIO` - inspect galvanic cells, aerial condition, and the next relay
+- `PING` - inspect galvanic cells, aerial condition, and the next relay
 - `BEACON` - spend cell power to request a trail report from the prairie mesh
 - `HUNT` - spend ammunition and two days to gain food
 - `REST` - spend food and three days to recover health
@@ -122,3 +124,4 @@ first river crossing, and reopens the SQLite save from a new game instance.
 The plugin is a supervised child process. A crash or invalid game command cannot replace or
 stop the openHop repeater. The client reconnects with bounded backoff if the Companion TCP
 connection is interrupted.
+
