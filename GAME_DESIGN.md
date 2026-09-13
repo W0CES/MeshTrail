@@ -40,7 +40,7 @@ than speaking like modern network engineers.
 
 - Every new party starts with full galvanic cells and an intact aerial.
 - Travel drains cells; storms may damage the aerial.
-- `RADIO` reports equipment condition and the next relay.
+- `PING` reports equipment condition and the next relay.
 - `BEACON` spends cell power to request a short route report.
 - Crossing a fort relay recharges cells and repairs some aerial damage.
 - A working set can receive warnings that avoid hazards or reveal shortcuts.
@@ -99,3 +99,4 @@ Nebraska connected one node at a time. It should appear as local color, not an a
 modern organization transported wholesale into the story. Fort Kearny, the Platte River,
 Chimney Rock, Scotts Bluff, and other Nebraska trail locations should receive especially rich
 events as the game grows.
+
