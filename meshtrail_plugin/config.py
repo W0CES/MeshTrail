@@ -21,6 +21,8 @@ class Settings:
     max_reply_bytes: int
     max_command_bytes: int
     duplicate_ttl_seconds: int
+    max_active_players: int
+    active_player_timeout_seconds: int
     random_seed: int
     log_level: str
 
@@ -35,6 +37,10 @@ class Settings:
             max_reply_bytes=_get_int("MAX_REPLY_BYTES", 145, config),
             max_command_bytes=_get_int("MAX_COMMAND_BYTES", 80, config),
             duplicate_ttl_seconds=_get_int("DUPLICATE_TTL_SECONDS", 600, config),
+            max_active_players=_get_int("MAX_ACTIVE_PLAYERS", 3, config),
+            active_player_timeout_seconds=_get_int(
+                "ACTIVE_PLAYER_TIMEOUT_SECONDS", 900, config
+            ),
             random_seed=_get_int("RANDOM_SEED", 1848, config),
             log_level=_get_str("LOG_LEVEL", "INFO", config).upper(),
         )
@@ -92,5 +98,9 @@ def _validate(settings: Settings) -> None:
         raise ConfigError("MAX_COMMAND_BYTES must be between 1 and 1024")
     if settings.duplicate_ttl_seconds < 60:
         raise ConfigError("DUPLICATE_TTL_SECONDS must be at least 60")
+    if not 1 <= settings.max_active_players <= 20:
+        raise ConfigError("MAX_ACTIVE_PLAYERS must be between 1 and 20")
+    if not 60 <= settings.active_player_timeout_seconds <= 86400:
+        raise ConfigError("ACTIVE_PLAYER_TIMEOUT_SECONDS must be between 60 and 86400")
     if not 1 <= settings.random_seed <= 2_147_483_647:
         raise ConfigError("RANDOM_SEED must be a positive 32-bit integer")
