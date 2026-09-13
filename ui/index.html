@@ -16,7 +16,7 @@
           <div class="eyebrow">openHop plugin</div>
           <h1>MeshTrail</h1>
         </div>
-        <span class="version">v0.2.0</span>
+        <span class="version">v0.3.0</span>
       </div>
       <span id="global-status" class="status-pill neutral">
         <span class="status-dot"></span>Loading
@@ -31,12 +31,13 @@
         <div>
           <div class="eyebrow">Wagon traffic controls</div>
           <h2>Keep the trail moving without crowding the mesh</h2>
-          <p class="muted">Choose how many wagon parties may play at once and how long an
-            idle party keeps its active slot. Saved journeys remain ready for the next trip west.</p>
+          <p class="muted">Choose how many wagon parties may play at once, how long an idle
+            party keeps its active slot, and how long inactive journeys remain saved.</p>
         </div>
         <div class="quick-facts" aria-label="Current MeshTrail limits">
           <div><span>Active players</span><strong id="overview-players">3</strong></div>
           <div><span>Idle timeout</span><strong id="overview-timeout">15 minutes</strong></div>
+          <div><span>Save retention</span><strong id="overview-retention">30 days</strong></div>
         </div>
       </section>
 
@@ -63,6 +64,10 @@
               <input id="active_player_timeout_minutes" type="number" min="1" max="1440" step="1" required>
               <small>An idle player releases a slot without losing their saved journey.</small>
             </label>
+            <label>Keep inactive saves (days)
+              <input id="save_retention_days" type="number" min="1" max="3650" step="1" required>
+              <small>Older journeys are permanently removed when MeshTrail next handles a command.</small>
+            </label>
           </div>
         </section>
       </form>
@@ -72,3 +77,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+
