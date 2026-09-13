@@ -25,6 +25,10 @@ the plugin UI and compact placements.
 This is not a copy or port of the commercial Oregon Trail game. The code, simulation, events,
 and writing in this repository are original.
 
+## Credits
+
+MeshTrail was created by **MacKayz117**.
+
 ## First playable slice
 
 For a beginner-friendly walkthrough, see [PLAYER_GUIDE.md](PLAYER_GUIDE.md).
