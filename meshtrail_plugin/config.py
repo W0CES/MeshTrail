@@ -23,6 +23,7 @@ class Settings:
     duplicate_ttl_seconds: int
     max_active_players: int
     active_player_timeout_seconds: int
+    save_retention_days: int
     random_seed: int
     log_level: str
 
@@ -41,6 +42,7 @@ class Settings:
             active_player_timeout_seconds=_get_int(
                 "ACTIVE_PLAYER_TIMEOUT_SECONDS", 900, config
             ),
+            save_retention_days=_get_int("SAVE_RETENTION_DAYS", 30, config),
             random_seed=_get_int("RANDOM_SEED", 1848, config),
             log_level=_get_str("LOG_LEVEL", "INFO", config).upper(),
         )
@@ -102,5 +104,8 @@ def _validate(settings: Settings) -> None:
         raise ConfigError("MAX_ACTIVE_PLAYERS must be between 1 and 20")
     if not 60 <= settings.active_player_timeout_seconds <= 86400:
         raise ConfigError("ACTIVE_PLAYER_TIMEOUT_SECONDS must be between 60 and 86400")
+    if not 1 <= settings.save_retention_days <= 3650:
+        raise ConfigError("SAVE_RETENTION_DAYS must be between 1 and 3650")
     if not 1 <= settings.random_seed <= 2_147_483_647:
         raise ConfigError("RANDOM_SEED must be a positive 32-bit integer")
+
