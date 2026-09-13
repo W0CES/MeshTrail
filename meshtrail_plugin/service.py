@@ -78,6 +78,7 @@ async def _async_main() -> int:
         duplicate_ttl_seconds=settings.duplicate_ttl_seconds,
         max_active_players=settings.max_active_players,
         active_player_timeout_seconds=settings.active_player_timeout_seconds,
+        save_retention_seconds=settings.save_retention_days * 86400,
         random_seed=settings.random_seed,
     )
     await MeshTrailService(settings, meshcore, game).run()
@@ -94,3 +95,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
