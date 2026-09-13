@@ -19,7 +19,9 @@ class FakeMeshCore:
 
 @pytest.mark.asyncio
 async def test_service_replies_within_budget(tmp_path):
-    settings = Settings("127.0.0.1", 5002, Path(tmp_path / "db"), 80, 80, 600, 1848, "INFO")
+    settings = Settings(
+        "127.0.0.1", 5002, Path(tmp_path / "db"), 80, 80, 600, 3, 900, 1848, "INFO"
+    )
     meshcore = FakeMeshCore()
     service = MeshTrailService(settings, meshcore, TrailStore(settings.database_path))
     message = IncomingMessage(b"\x01\x02\x03\x04\x05\x06", "start", 1, 0, 0, None)
@@ -30,10 +32,11 @@ async def test_service_replies_within_budget(tmp_path):
 
 @pytest.mark.asyncio
 async def test_service_ignores_non_plain_messages(tmp_path):
-    settings = Settings("127.0.0.1", 5002, Path(tmp_path / "db"), 145, 80, 600, 1848, "INFO")
+    settings = Settings(
+        "127.0.0.1", 5002, Path(tmp_path / "db"), 145, 80, 600, 3, 900, 1848, "INFO"
+    )
     meshcore = FakeMeshCore()
     service = MeshTrailService(settings, meshcore, TrailStore(settings.database_path))
     message = IncomingMessage(b"\x01\x02\x03\x04\x05\x06", "start", 1, 1, 0, None)
     await service.handle_message(message)
     assert meshcore.sent == []
-
