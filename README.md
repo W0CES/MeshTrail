@@ -69,9 +69,22 @@ On Windows, use `.venv\Scripts\python` and `.venv\Scripts\pytest`.
 
 ## openHop installation
 
-Build the wheel with `python -m build`, then install the resulting wheel through openHop's
-plugin manager using the same wheel-install workflow used for MeshZork. The manifest installs
-under plugin ID `openhop.meshtrail`, and the service entrypoint is `meshtrail-openhop`.
+Build the wheel with `python -m build`. The installable file will be created in `dist/` with a
+name similar to `openhop_meshtrail_plugin-0.3.0-py3-none-any.whl`.
+
+To install it through the openHop dashboard:
+
+1. Sign in to openHop as an administrator.
+2. Open **Configuration**, then **Plugins**.
+3. Select **Wheel** and choose the MeshTrail `.whl` file from the `dist/` directory.
+4. Confirm the installation and wait for MeshTrail to appear in the installed plugin list.
+5. Enable MeshTrail if it is not already enabled. Its status should change to **Running**.
+6. Select **Open** on the MeshTrail card to review its player limit, inactivity timeout, and
+   save-retention settings.
+
+The manifest installs the plugin as `openhop.meshtrail` and starts the `meshtrail-openhop`
+service. Upgrading is done the same way: build the newer wheel and install it from the Plugins
+page. openHop keeps MeshTrail's data directory, so existing saved journeys remain available.
 
 The default connection is `127.0.0.1:5003`. Runtime data is stored in
 `$OPENHOP_PLUGIN_DATA/meshtrail.sqlite3`. Configuration can be changed in the plugin's
