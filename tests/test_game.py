@@ -89,6 +89,36 @@ def test_strategy_commands(tmp_path):
     assert "Rested" in game.handle("player", "rest", timestamp=5)
 
 
+def test_trading_post_at_independence(tmp_path):
+    game = TrailStore(tmp_path / "trail.db")
+    game.handle("buyer", "start", timestamp=1)
+    assert "food 10lb/$2" in game.handle("buyer", "shop", timestamp=2)
+    assert "Food 1100; cash $380" in game.handle("buyer", "buy food 100", timestamp=3)
+    assert "Ammo 70; cash $376" in game.handle("buyer", "buy ammo 20", timestamp=4)
+
+
+def test_trading_requires_a_post_and_enough_cash(tmp_path):
+    path = tmp_path / "trail.db"
+    game = TrailStore(path)
+    game.handle("buyer", "start", timestamp=1)
+    with sqlite3.connect(path) as connection:
+        connection.execute("UPDATE sessions SET money=1 WHERE sender_id='buyer'")
+    assert "costs $2" in game.handle("buyer", "buy food 10", timestamp=2)
+    game.handle("buyer", "go", timestamp=3)
+    game.handle("buyer", "caulk", timestamp=4)
+    assert "No trading post here" in game.handle("buyer", "shop", timestamp=5)
+
+
+def test_fort_bridger_opens_a_trading_post(tmp_path):
+    path = tmp_path / "trail.db"
+    game = TrailStore(path, random_seed=1848)
+    game.handle("buyer", "start", timestamp=1)
+    with sqlite3.connect(path) as connection:
+        connection.execute("UPDATE sessions SET distance=1170 WHERE sender_id='buyer'")
+    assert "Fort Bridger: trading post open" in game.handle("buyer", "go", timestamp=2)
+    assert "Fort Bridger post" in game.handle("buyer", "shop", timestamp=3)
+
+
 def test_mesh_telegraph_commands_use_cells(tmp_path):
     game = TrailStore(tmp_path / "trail.db")
     game.handle("player", "start", timestamp=1)

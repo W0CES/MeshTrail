@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "openhop.meshtrail",
   "name": "MeshTrail",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Lead a wagon party west in a compact game built for MeshCore direct messages.",
   "runtime": {
     "type": "python",

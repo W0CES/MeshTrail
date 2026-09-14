@@ -12,8 +12,10 @@ sensitive, so `go`, `GO`, and `Go` work the same way.
 1. Send `START` to form a new wagon party.
 2. Send `STATUS` to see your day, distance, food, health, and next landmark.
 3. Send `SUPPLIES` to see ammunition, spare parts, cash, cells, and aerial condition.
-4. Send `GO` to travel west for seven days.
-5. Continue checking your supplies and responding to events until you reach Oregon.
+4. Send `SHOP` to see the Independence outfitter's food and ammunition prices.
+5. Purchase supplies with commands such as `BUY FOOD 100` or `BUY AMMO 20`.
+6. Send `GO` to travel west for seven days.
+7. Continue checking your supplies and responding to events until you reach Oregon.
 
 Every new party begins with:
 
@@ -39,6 +41,9 @@ that retention period from the MeshTrail settings page.
 | `GO` | Travels for seven days. This is the main way to move west. |
 | `STATUS` | Shows day, distance, food, health, and the next landmark. |
 | `SUPPLIES` | Shows food, ammunition, spare parts, cash, cells, and aerial condition. |
+| `SHOP` | Shows food and ammunition prices at Independence or a fort. |
+| `BUY FOOD 100` | Buys 100 lb of food. Food is sold in multiples of 10 lb. |
+| `BUY AMMO 20` | Buys 20 ammunition. Ammunition is sold in multiples of 10. |
 | `PING` | Checks the telegraph and identifies the next mesh relay or landmark. |
 | `BEACON` | Uses 5% of your cells to request a trail report. |
 | `HUNT` | Uses ammunition and two days to gain food. |
@@ -58,6 +63,16 @@ that retention period from the MeshTrail settings page.
 
 `SUPPLIES` is also available as `INV`, and `STATUS` as `S`. `GO` also accepts `TRAVEL` or
 `CONTINUE`. `?` is a shortcut for `HELP`.
+
+## Buying supplies
+
+Trading posts are available before leaving Independence and when you reach Fort Kearny, Fort
+Laramie, Fort Bridger, Fort Hall, or Fort Boise. Send `SHOP` while stopped there to see prices and
+your available cash. Food costs $2 per 10 lb and ammunition costs $2 per 10 units.
+
+Purchases do not consume a travel day. Once you send `GO` and leave a trading post, you must wait
+until the next fort to buy more supplies. If you cannot afford a purchase, MeshTrail reports its
+cost and leaves your inventory unchanged.
 
 ## How to make decisions
 

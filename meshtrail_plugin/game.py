@@ -15,6 +15,10 @@ START_FOOD = 1000
 START_AMMO = 50
 START_PARTS = 3
 PARTY_SIZE = 5
+FOOD_LOT_SIZE = 10
+FOOD_LOT_PRICE = 2
+AMMO_LOT_SIZE = 10
+AMMO_LOT_PRICE = 2
 PLAYER_GUIDE_URL = "https://github.com/W0CES/MeshTrail/blob/main/PLAYER_GUIDE.md"
 PACE_MILES = {"steady": 95, "strenuous": 120, "grueling": 145}
 RATION_FOOD = {"filling": 3, "meager": 2, "bare": 1}
@@ -35,6 +39,14 @@ LANDMARKS = (
     (2000, "Willamette Valley"),
 )
 RELAY_MILES = {300, 650, 1050, 1350, 1650, 1900}
+TRADING_POSTS = {
+    0: "Independence",
+    300: "Fort Kearny",
+    650: "Fort Laramie",
+    1200: "Fort Bridger",
+    1350: "Fort Hall",
+    1650: "Fort Boise",
+}
 PRAIRIE_MESH_OPERATORS = (
     "Applesauce",
     "Heartwood Observer",
@@ -100,6 +112,7 @@ class TrailStore:
                     battery INTEGER NOT NULL,
                     aerial INTEGER NOT NULL,
                     money INTEGER NOT NULL DEFAULT 400,
+                    shop_location INTEGER NOT NULL DEFAULT -1,
                     pending_event TEXT NOT NULL DEFAULT '',
                     outcome TEXT NOT NULL,
                     updated_at INTEGER NOT NULL
@@ -120,6 +133,10 @@ class TrailStore:
             if "pending_event" not in columns:
                 connection.execute(
                     "ALTER TABLE sessions ADD COLUMN pending_event TEXT NOT NULL DEFAULT ''"
+                )
+            if "shop_location" not in columns:
+                connection.execute(
+                    "ALTER TABLE sessions ADD COLUMN shop_location INTEGER NOT NULL DEFAULT -1"
                 )
 
     def handle(self, sender_id: str, command: str, *, timestamp: int | None = None) -> str | None:
@@ -175,7 +192,10 @@ class TrailStore:
             if normalized in {"", "start", "status"}:
                 return self._status(state)
             if normalized == "help":
-                return "GO, STATUS, SUPPLIES, PING, BEACON, HUNT, REST, PACE, RATIONS, GUIDE, RESET. Rivers: FORD, CAULK, FERRY."
+                return (
+                    "GO, STATUS, SUPPLIES, SHOP, BUY FOOD n, BUY AMMO n, PING, BEACON, "
+                    "HUNT, REST, PACE, RATIONS, GUIDE, RESET. Rivers: FORD/CAULK/FERRY."
+                )
             if normalized == "supplies":
                 return f"Food {state['food']}lb; ammo {state['ammo']}; parts {state['parts']}; cash ${state['money']}; cells {state['battery']}%; aerial {state['aerial']}%."
             if normalized in {"ping", "radio"}:
@@ -194,6 +214,10 @@ class TrailStore:
                 if normalized in {"ford", "caulk", "ferry"}:
                     return self._resolve_river(connection, sender_id, state, normalized, now)
                 return "A river blocks the trail. Choose FORD, CAULK, or FERRY."
+            if normalized == "shop":
+                return self._shop(state)
+            if normalized.startswith("buy "):
+                return self._buy(connection, sender_id, state, normalized, now)
             if normalized == "rest":
                 return self._rest(connection, sender_id, state, now)
             if normalized == "hunt":
@@ -228,8 +252,8 @@ class TrailStore:
     def _create_session(connection: sqlite3.Connection, sender_id: str, now: int) -> None:
         connection.execute(
             "INSERT INTO sessions(sender_id,day,distance,food,ammo,parts,health,pace,rations,"
-            "turns,battery,aerial,money,pending_event,outcome,updated_at) "
-            "VALUES (?,1,0,?,?,?,?,?,?,0,100,100,400,'','traveling',?)",
+            "turns,battery,aerial,money,shop_location,pending_event,outcome,updated_at) "
+            "VALUES (?,1,0,?,?,?,?,?,?,0,100,100,400,0,'','traveling',?)",
             (sender_id, START_FOOD, START_AMMO, START_PARTS, 100, "steady", "filling", now),
         )
 
@@ -261,6 +285,56 @@ class TrailStore:
             f"LoRa Aether Telegraph: cells {state['battery']}%, aerial {state['aerial']}%. "
             f"Next mesh relay: {next_name}, {remaining}mi. BEACON sends a trail ping."
         )
+
+    @staticmethod
+    def _shop(state: dict[str, object]) -> str:
+        location = int(state["shop_location"])
+        if location not in TRADING_POSTS:
+            return (
+                "No trading post here. Supplies are sold at Independence and forts along "
+                "the trail."
+            )
+        return (
+            f"{TRADING_POSTS[location]} post: food {FOOD_LOT_SIZE}lb/${FOOD_LOT_PRICE}; "
+            f"ammo {AMMO_LOT_SIZE}/${AMMO_LOT_PRICE}. Cash ${state['money']}. "
+            "BUY FOOD 100 or BUY AMMO 20."
+        )
+
+    @staticmethod
+    def _buy(
+        connection: sqlite3.Connection,
+        sender_id: str,
+        state: dict[str, object],
+        command: str,
+        now: int,
+    ) -> str:
+        location = int(state["shop_location"])
+        if location not in TRADING_POSTS:
+            return "No trading post here. Buy supplies at Independence or a fort."
+        words = command.split()
+        if len(words) != 3 or words[1] not in {"food", "ammo"}:
+            return "Buy with BUY FOOD n or BUY AMMO n. Amounts must be multiples of 10."
+        try:
+            amount = int(words[2])
+        except ValueError:
+            return "Purchase amount must be a whole number and a multiple of 10."
+        item = words[1]
+        maximum = 5000 if item == "food" else 500
+        if amount < 10 or amount > maximum or amount % 10:
+            return f"Buy 10-{maximum} {item} in multiples of 10."
+        lot_size = FOOD_LOT_SIZE if item == "food" else AMMO_LOT_SIZE
+        lot_price = FOOD_LOT_PRICE if item == "food" else AMMO_LOT_PRICE
+        cost = amount // lot_size * lot_price
+        money = int(state["money"])
+        if cost > money:
+            return f"That costs ${cost}; you have ${money}. Send SHOP for prices."
+        new_total = int(state[item]) + amount
+        connection.execute(
+            f"UPDATE sessions SET {item}=?,money=?,updated_at=? WHERE sender_id=?",
+            (new_total, money - cost, now, sender_id),
+        )
+        unit = "lb food" if item == "food" else "ammo"
+        return f"Bought {amount} {unit} for ${cost}. {item.title()} {new_total}; cash ${money-cost}."
 
     @staticmethod
     def _finished(state: dict[str, object]) -> str:
@@ -316,7 +390,7 @@ class TrailStore:
             battery = max(0, int(state["battery"]) - 2)
             connection.execute(
                 "UPDATE sessions SET day=day+?,distance=?,food=?,battery=?,pending_event=?,"
-                "turns=turns+1,updated_at=? WHERE sender_id=?",
+                "shop_location=-1,turns=turns+1,updated_at=? WHERE sender_id=?",
                 (approach_days, mile, food, battery, f"river:{mile}", now, sender_id),
             )
             return f"{name}, depth {depth}ft. The trail ends at the bank. Choose FORD, CAULK, or FERRY ($25)."
@@ -385,6 +459,9 @@ class TrailStore:
         crossed_relays = [
             mark for mark in RELAY_MILES if int(state["distance"]) < mark <= distance
         ]
+        crossed_posts = [
+            mark for mark in TRADING_POSTS if int(state["distance"]) < mark <= distance
+        ]
         if crossed_relays:
             battery = 100
             aerial = min(100, aerial + 25)
@@ -400,13 +477,34 @@ class TrailStore:
                 )
             else:
                 event += " Fort relay: cells charged and aerial serviced."
+        shop_location = max(crossed_posts) if crossed_posts else -1
+        if shop_location == 300:
+            event = (
+                "Fort Kearny: SHOP open. Nebraska Mesh operators DOS_ and Nightcrawler "
+                "service your set."
+            )
+        elif shop_location >= 0:
+            event = f"{TRADING_POSTS[shop_location]}: trading post open. Send SHOP."
         day = int(state["day"]) + days
         outcome = "won" if distance >= TRAIL_END else ("dead" if health <= 0 else "traveling")
         health = max(0, min(100, health))
         connection.execute(
-            "UPDATE sessions SET day=?,distance=?,food=?,parts=?,health=?,battery=?,aerial=?,turns=turns+1,"
+            "UPDATE sessions SET day=?,distance=?,food=?,parts=?,health=?,battery=?,aerial=?,"
+            "shop_location=?,turns=turns+1,"
             "outcome=?,updated_at=? WHERE sender_id=?",
-            (day, distance, food, parts, health, battery, aerial, outcome, now, sender_id),
+            (
+                day,
+                distance,
+                food,
+                parts,
+                health,
+                battery,
+                aerial,
+                shop_location,
+                outcome,
+                now,
+                sender_id,
+            ),
         )
         if outcome == "won":
             return (

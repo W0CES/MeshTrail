@@ -23,6 +23,8 @@ Each sender prefix gets an independent SQLite-backed wagon party. Send one comma
 - `START` - create a new party
 - `GO` - travel for seven days
 - `STATUS` or `SUPPLIES` - inspect the journey
+- `SHOP` - view food and ammunition prices at Independence or a fort
+- `BUY FOOD <pounds>` or `BUY AMMO <amount>` - purchase supplies in multiples of 10
 - `PING` - inspect galvanic cells, aerial condition, and the next relay
 - `BEACON` - spend cell power to request a trail report from the prairie mesh
 - `HUNT` - spend ammunition and two days to gain food
@@ -59,7 +61,7 @@ On Windows, use `.venv\Scripts\python` and `.venv\Scripts\pytest`.
 ## openHop installation
 
 Build the wheel with `python -m build`. The installable file will be created in `dist/` with a
-name similar to `openhop_meshtrail_plugin-0.3.0-py3-none-any.whl`.
+name similar to `openhop_meshtrail_plugin-0.4.0-py3-none-any.whl`.
 
 To install it through the openHop dashboard:
 
@@ -131,7 +133,7 @@ first river crossing, and reopens the SQLite save from a new game instance.
 
 MeshTrail publishes installable wheels as GitHub Release assets. To publish a release, first make
 sure the version in `pyproject.toml`, `openhop-plugin.json`, and `meshtrail_plugin/__init__.py`
-matches, then create and push a canonical tag such as `v0.3.0`. The **Publish Release Wheel**
+matches, then create and push a canonical tag such as `v0.4.0`. The **Publish Release Wheel**
 workflow verifies the tag, runs the Python and Docker test suites, builds the wheel, and attaches
 both the wheel and a ZIP bundle to the matching GitHub Release. It can also be rerun manually for
 an existing tag from the repository's Actions page.
