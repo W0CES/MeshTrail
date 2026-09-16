@@ -11,9 +11,11 @@ sensitive, so `go`, `GO`, and `Go` work the same way.
 
 1. Send `START` to form a new wagon party.
 2. Send `STATUS` to see your day, distance, food, health, and next landmark.
-3. Send `SUPPLIES` to see ammunition, spare parts, cash, cells, and aerial condition.
-4. Send `SHOP` to see the Independence outfitter's food and ammunition prices.
-5. Purchase supplies with commands such as `BUY FOOD 100` or `BUY AMMO 20`.
+3. Send `SUPPLIES` to see food, ammunition, medicine, spare parts, cash, cells, and aerial
+   condition.
+4. Send `SHOP` to see the Independence outfitter's food, ammunition, and medicine prices.
+5. Purchase supplies with commands such as `BUY FOOD 100`, `BUY AMMO 20`, or
+   `BUY MEDICINE 1`.
 6. Send `GO` to travel west for seven days.
 7. Continue checking your supplies and responding to events until you reach Oregon.
 
@@ -40,10 +42,15 @@ that retention period from the MeshTrail settings page.
 | `START` | Creates your wagon party. Use this at the beginning. |
 | `GO` | Travels for seven days. This is the main way to move west. |
 | `STATUS` | Shows day, distance, food, health, and the next landmark. |
-| `SUPPLIES` | Shows food, ammunition, spare parts, cash, cells, and aerial condition. |
+| `SUPPLIES` | Shows food, ammunition, medicine, spare parts, cash, cells, and aerial condition. |
 | `SHOP` | Shows food and ammunition prices at Independence or a fort. |
 | `BUY FOOD 100` | Buys 100 lb of food. Food is sold in multiples of 10 lb. |
 | `BUY AMMO 20` | Buys 20 ammunition. Ammunition is sold in multiples of 10. |
+| `BUY MEDICINE 1` | Buys medicine by the bottle at a trading post. |
+| `MEDICINE` | Uses one bottle, restores 3 health, and improves the next rest. |
+| `FORAGE` | Spends one day searching for herbal medicine. |
+| `TRADE` | Accepts a traveler's offer when you have enough cash. |
+| `PASS` | Declines a traveler's offer without spending cash. |
 | `PING` | Checks the telegraph and identifies the next mesh relay or landmark. |
 | `BEACON` | Uses 5% of your cells to request a trail report. |
 | `HUNT` | Uses ammunition and two days to gain food. |
@@ -68,11 +75,26 @@ that retention period from the MeshTrail settings page.
 
 Trading posts are available before leaving Independence and when you reach Fort Kearny, Fort
 Laramie, Fort Bridger, Fort Hall, or Fort Boise. Send `SHOP` while stopped there to see prices and
-your available cash. Food costs $2 per 10 lb and ammunition costs $2 per 10 units.
+your available cash. Food costs $2 per 10 lb, ammunition costs $2 per 10 units, and medicine
+costs $15 per bottle.
 
 Purchases do not consume a travel day. Once you send `GO` and leave a trading post, you must wait
 until the next fort to buy more supplies. If you cannot afford a purchase, MeshTrail reports its
 cost and leaves your inventory unchanged.
+
+Travelers may also offer food, ammunition, or medicine at lower trail prices. Send `TRADE` to
+accept an offer or `PASS` to decline it. The journey waits for your answer, so the offer cannot be
+lost in a delayed radio exchange.
+
+## Medicine and herbal remedies
+
+Send `FORAGE` to spend one day searching for useful plants. Foraging consumes that day's rations
+and may produce one or two bottles of herbal medicine, but sometimes finds nothing useful.
+
+Send `MEDICINE` while injured to consume one bottle and restore 3 health. The treatment also
+increases the healing from your next `REST` by about 20%. During certain illness events, the game
+asks you to choose `MEDICINE` to prevent the illness or `ENDURE` and accept the health loss. Each
+preventive treatment consumes one bottle.
 
 ## How to make decisions
 

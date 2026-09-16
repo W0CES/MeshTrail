@@ -23,8 +23,11 @@ Each sender prefix gets an independent SQLite-backed wagon party. Send one comma
 - `START` - create a new party
 - `GO` - travel for seven days
 - `STATUS` or `SUPPLIES` - inspect the journey
-- `SHOP` - view food and ammunition prices at Independence or a fort
-- `BUY FOOD <pounds>` or `BUY AMMO <amount>` - purchase supplies in multiples of 10
+- `SHOP` - view food, ammunition, and medicine prices at Independence or a fort
+- `BUY FOOD <pounds>`, `BUY AMMO <amount>`, or `BUY MEDICINE <bottles>`
+- `TRADE` or `PASS` - answer a traveler's offer for food, ammunition, or medicine
+- `FORAGE` - spend one day looking for herbal medicine
+- `MEDICINE` - consume one bottle to restore health and improve the next rest
 - `PING` - inspect galvanic cells, aerial condition, and the next relay
 - `BEACON` - spend cell power to request a trail report from the prairie mesh
 - `HUNT` - spend ammunition and two days to gain food

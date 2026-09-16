@@ -14,11 +14,13 @@ TRAIL_END = 2000
 START_FOOD = 1000
 START_AMMO = 50
 START_PARTS = 3
+START_MEDICINE = 0
 PARTY_SIZE = 5
 FOOD_LOT_SIZE = 10
 FOOD_LOT_PRICE = 2
 AMMO_LOT_SIZE = 10
 AMMO_LOT_PRICE = 2
+MEDICINE_PRICE = 15
 PLAYER_GUIDE_URL = "https://github.com/W0CES/MeshTrail/blob/main/PLAYER_GUIDE.md"
 PACE_MILES = {"steady": 95, "strenuous": 120, "grueling": 145}
 RATION_FOOD = {"filling": 3, "meager": 2, "bare": 1}
@@ -54,6 +56,12 @@ PRAIRIE_MESH_OPERATORS = (
     "NADPEATER",
     "Florence OMA",
     "Tammy",
+)
+PRAIRIE_TRADERS = (
+    "Ada Mercer",
+    "Elias Reed",
+    "Mara Pike",
+    "Silas Webb",
 )
 RIVERS = {
     55: ("Kansas River", 3),
@@ -112,6 +120,8 @@ class TrailStore:
                     battery INTEGER NOT NULL,
                     aerial INTEGER NOT NULL,
                     money INTEGER NOT NULL DEFAULT 400,
+                    medicine INTEGER NOT NULL DEFAULT 0,
+                    medicine_care INTEGER NOT NULL DEFAULT 0,
                     shop_location INTEGER NOT NULL DEFAULT -1,
                     pending_event TEXT NOT NULL DEFAULT '',
                     outcome TEXT NOT NULL,
@@ -137,6 +147,14 @@ class TrailStore:
             if "shop_location" not in columns:
                 connection.execute(
                     "ALTER TABLE sessions ADD COLUMN shop_location INTEGER NOT NULL DEFAULT -1"
+                )
+            if "medicine" not in columns:
+                connection.execute(
+                    "ALTER TABLE sessions ADD COLUMN medicine INTEGER NOT NULL DEFAULT 0"
+                )
+            if "medicine_care" not in columns:
+                connection.execute(
+                    "ALTER TABLE sessions ADD COLUMN medicine_care INTEGER NOT NULL DEFAULT 0"
                 )
 
     def handle(self, sender_id: str, command: str, *, timestamp: int | None = None) -> str | None:
@@ -193,11 +211,15 @@ class TrailStore:
                 return self._status(state)
             if normalized == "help":
                 return (
-                    "GO, STATUS, SUPPLIES, SHOP, BUY FOOD n, BUY AMMO n, PING, BEACON, "
-                    "HUNT, REST, PACE, RATIONS, GUIDE, RESET. Rivers: FORD/CAULK/FERRY."
+                    "GO STATUS SUPPLIES SHOP BUY PING BEACON HUNT FORAGE REST MEDICINE "
+                    "PACE RATIONS GUIDE RESET. Rivers: FORD/CAULK/FERRY. Offers: TRADE/PASS."
                 )
             if normalized == "supplies":
-                return f"Food {state['food']}lb; ammo {state['ammo']}; parts {state['parts']}; cash ${state['money']}; cells {state['battery']}%; aerial {state['aerial']}%."
+                return (
+                    f"Food {state['food']}lb; ammo {state['ammo']}; medicine "
+                    f"{state['medicine']}; parts {state['parts']}; cash ${state['money']}; "
+                    f"cells {state['battery']}%; aerial {state['aerial']}%."
+                )
             if normalized in {"ping", "radio"}:
                 return self._radio_status(state)
             if normalized == "beacon":
@@ -211,13 +233,29 @@ class TrailStore:
             if state["outcome"] != "traveling":
                 return self._finished(state)
             if state["pending_event"]:
-                if normalized in {"ford", "caulk", "ferry"}:
-                    return self._resolve_river(connection, sender_id, state, normalized, now)
-                return "A river blocks the trail. Choose FORD, CAULK, or FERRY."
+                pending = str(state["pending_event"])
+                if pending.startswith("river:"):
+                    if normalized in {"ford", "caulk", "ferry"}:
+                        return self._resolve_river(connection, sender_id, state, normalized, now)
+                    return "A river blocks the trail. Choose FORD, CAULK, or FERRY."
+                if pending.startswith("illness:"):
+                    if normalized in {"medicine", "endure"}:
+                        return self._resolve_illness(
+                            connection, sender_id, state, normalized, now
+                        )
+                    return "Illness threatens the party. Use MEDICINE to prevent it, or ENDURE."
+                if pending.startswith("trade:"):
+                    if normalized in {"trade", "pass"}:
+                        return self._resolve_trade(connection, sender_id, state, normalized, now)
+                    return "A trail trader waits for your answer. Send TRADE or PASS."
             if normalized == "shop":
                 return self._shop(state)
             if normalized.startswith("buy "):
                 return self._buy(connection, sender_id, state, normalized, now)
+            if normalized == "medicine":
+                return self._use_medicine(connection, sender_id, state, now)
+            if normalized == "forage":
+                return self._forage(connection, sender_id, state, now)
             if normalized == "rest":
                 return self._rest(connection, sender_id, state, now)
             if normalized == "hunt":
@@ -252,17 +290,44 @@ class TrailStore:
     def _create_session(connection: sqlite3.Connection, sender_id: str, now: int) -> None:
         connection.execute(
             "INSERT INTO sessions(sender_id,day,distance,food,ammo,parts,health,pace,rations,"
-            "turns,battery,aerial,money,shop_location,pending_event,outcome,updated_at) "
-            "VALUES (?,1,0,?,?,?,?,?,?,0,100,100,400,0,'','traveling',?)",
-            (sender_id, START_FOOD, START_AMMO, START_PARTS, 100, "steady", "filling", now),
+            "turns,battery,aerial,money,medicine,medicine_care,shop_location,pending_event,"
+            "outcome,updated_at) VALUES (?,1,0,?,?,?,?,?,?,0,100,100,400,?,0,0,'','traveling',?)",
+            (
+                sender_id,
+                START_FOOD,
+                START_AMMO,
+                START_PARTS,
+                100,
+                "steady",
+                "filling",
+                START_MEDICINE,
+                now,
+            ),
         )
 
     @staticmethod
     def _status(state: dict[str, object]) -> str:
         if state.get("pending_event"):
-            mile = int(str(state["pending_event"]).partition(":")[2])
-            name, depth = RIVERS[mile]
-            return f"Day {state['day']} at {name}, depth {depth}ft. Choose FORD, CAULK, or FERRY. Cash ${state['money']}."
+            pending = str(state["pending_event"])
+            if pending.startswith("river:"):
+                mile = int(pending.partition(":")[2])
+                name, depth = RIVERS[mile]
+                return (
+                    f"Day {state['day']} at {name}, depth {depth}ft. Choose FORD, CAULK, "
+                    f"or FERRY. Cash ${state['money']}."
+                )
+            if pending.startswith("illness:"):
+                return (
+                    f"Day {state['day']}: illness threatens. Medicine {state['medicine']}. "
+                    "Use MEDICINE or ENDURE."
+                )
+            if pending.startswith("trade:"):
+                _, trader_index, item, amount, price = pending.split(":")
+                trader = PRAIRIE_TRADERS[int(trader_index)]
+                return (
+                    f"Day {state['day']}: {trader} offers {amount} {item} for ${price}. "
+                    "TRADE or PASS."
+                )
         next_name, remaining = TrailStore._next_landmark(int(state["distance"]))
         return (
             f"Day {state['day']} | {state['distance']}/{TRAIL_END}mi | food {state['food']}lb | "
@@ -296,8 +361,8 @@ class TrailStore:
             )
         return (
             f"{TRADING_POSTS[location]} post: food {FOOD_LOT_SIZE}lb/${FOOD_LOT_PRICE}; "
-            f"ammo {AMMO_LOT_SIZE}/${AMMO_LOT_PRICE}. Cash ${state['money']}. "
-            "BUY FOOD 100 or BUY AMMO 20."
+            f"ammo {AMMO_LOT_SIZE}/${AMMO_LOT_PRICE}; medicine 1/${MEDICINE_PRICE}. "
+            f"Cash ${state['money']}. BUY FOOD 100, BUY AMMO 20, or BUY MEDICINE 1."
         )
 
     @staticmethod
@@ -312,18 +377,23 @@ class TrailStore:
         if location not in TRADING_POSTS:
             return "No trading post here. Buy supplies at Independence or a fort."
         words = command.split()
-        if len(words) != 3 or words[1] not in {"food", "ammo"}:
-            return "Buy with BUY FOOD n or BUY AMMO n. Amounts must be multiples of 10."
+        if len(words) != 3 or words[1] not in {"food", "ammo", "medicine"}:
+            return "Buy with BUY FOOD n, BUY AMMO n, or BUY MEDICINE n."
         try:
             amount = int(words[2])
         except ValueError:
-            return "Purchase amount must be a whole number and a multiple of 10."
+            return "Purchase amount must be a whole number."
         item = words[1]
-        maximum = 5000 if item == "food" else 500
-        if amount < 10 or amount > maximum or amount % 10:
+        if item == "medicine":
+            minimum, maximum, lot_size, lot_price = 1, 20, 1, MEDICINE_PRICE
+        elif item == "food":
+            minimum, maximum, lot_size, lot_price = 10, 5000, FOOD_LOT_SIZE, FOOD_LOT_PRICE
+        else:
+            minimum, maximum, lot_size, lot_price = 10, 500, AMMO_LOT_SIZE, AMMO_LOT_PRICE
+        if amount < minimum or amount > maximum or amount % lot_size:
+            if item == "medicine":
+                return "Buy 1-20 medicine bottles at a time."
             return f"Buy 10-{maximum} {item} in multiples of 10."
-        lot_size = FOOD_LOT_SIZE if item == "food" else AMMO_LOT_SIZE
-        lot_price = FOOD_LOT_PRICE if item == "food" else AMMO_LOT_PRICE
         cost = amount // lot_size * lot_price
         money = int(state["money"])
         if cost > money:
@@ -333,8 +403,56 @@ class TrailStore:
             f"UPDATE sessions SET {item}=?,money=?,updated_at=? WHERE sender_id=?",
             (new_total, money - cost, now, sender_id),
         )
-        unit = "lb food" if item == "food" else "ammo"
+        unit = "lb food" if item == "food" else item
         return f"Bought {amount} {unit} for ${cost}. {item.title()} {new_total}; cash ${money-cost}."
+
+    @staticmethod
+    def _use_medicine(
+        connection: sqlite3.Connection,
+        sender_id: str,
+        state: dict[str, object],
+        now: int,
+    ) -> str:
+        medicine = int(state["medicine"])
+        health = int(state["health"])
+        if medicine < 1:
+            return "No medicine remains. Buy it at a trading post, trade, or FORAGE."
+        if health >= 100:
+            return "The party is already at full health; medicine was not used."
+        health = min(100, health + 3)
+        connection.execute(
+            "UPDATE sessions SET medicine=?,medicine_care=1,health=?,updated_at=? "
+            "WHERE sender_id=?",
+            (medicine - 1, health, now, sender_id),
+        )
+        return (
+            f"Used 1 medicine. Health {health}; {medicine-1} remain. "
+            "The next REST recovers 20% faster."
+        )
+
+    def _forage(
+        self,
+        connection: sqlite3.Connection,
+        sender_id: str,
+        state: dict[str, object],
+        now: int,
+    ) -> str:
+        rng = self._rng(sender_id, int(state["turns"]), "forage")
+        food = max(0, int(state["food"]) - PARTY_SIZE * RATION_FOOD[str(state["rations"])])
+        found = rng.choices((0, 1, 2), weights=(4, 5, 1), k=1)[0]
+        medicine = int(state["medicine"]) + found
+        day = int(state["day"]) + 1
+        connection.execute(
+            "UPDATE sessions SET day=?,food=?,medicine=?,turns=turns+1,updated_at=? "
+            "WHERE sender_id=?",
+            (day, food, medicine, now, sender_id),
+        )
+        if found:
+            return (
+                f"Foraged 1 day and prepared {found} herbal medicine. "
+                f"Medicine {medicine}; food {food}lb."
+            )
+        return f"Foraged 1 day but found no useful herbs. Medicine {medicine}; food {food}lb."
 
     @staticmethod
     def _finished(state: dict[str, object]) -> str:
@@ -401,6 +519,7 @@ class TrailStore:
         battery = max(0, int(state["battery"]) - rng.randint(3, 7))
         aerial = int(state["aerial"])
         event = "Clear trail."
+        pending_event = ""
 
         if food == 0:
             health -= 18
@@ -408,8 +527,8 @@ class TrailStore:
         elif rng.random() < 0.42:
             roll = rng.randrange(7)
             if roll == 0:
-                health -= 12
-                event = "Dysentery strikes the party."
+                pending_event = "illness:dysentery:12"
+                event = "Dysentery threatens. MEDICINE prevents it; ENDURE loses 12 health."
             elif roll == 1:
                 if parts:
                     parts -= 1
@@ -426,9 +545,16 @@ class TrailStore:
                 miles += 20
                 event = "Good weather and a firm trail!"
             elif roll == 4:
-                found = rng.randint(15, 35)
-                food += found
-                event = f"A friendly wagon shared {found}lb food."
+                offers = (
+                    ("food", 100, 15),
+                    ("ammo", 20, 8),
+                    ("medicine", 1, 10),
+                )
+                item, amount, price = rng.choice(offers)
+                trader_index = rng.randrange(len(PRAIRIE_TRADERS))
+                trader = PRAIRIE_TRADERS[trader_index]
+                pending_event = f"trade:{trader_index}:{item}:{amount}:{price}"
+                event = f"{trader} offers {amount} {item} for ${price}. TRADE or PASS."
             elif roll == 5:
                 damage = rng.randint(8, 20)
                 aerial = max(0, aerial - damage)
@@ -478,7 +604,9 @@ class TrailStore:
             else:
                 event += " Fort relay: cells charged and aerial serviced."
         shop_location = max(crossed_posts) if crossed_posts else -1
-        if shop_location == 300:
+        if pending_event:
+            pass
+        elif shop_location == 300:
             event = (
                 "Fort Kearny: SHOP open. Nebraska Mesh operators DOS_ and Nightcrawler "
                 "service your set."
@@ -490,7 +618,7 @@ class TrailStore:
         health = max(0, min(100, health))
         connection.execute(
             "UPDATE sessions SET day=?,distance=?,food=?,parts=?,health=?,battery=?,aerial=?,"
-            "shop_location=?,turns=turns+1,"
+            "shop_location=?,pending_event=?,turns=turns+1,"
             "outcome=?,updated_at=? WHERE sender_id=?",
             (
                 day,
@@ -501,6 +629,7 @@ class TrailStore:
                 battery,
                 aerial,
                 shop_location,
+                pending_event,
                 outcome,
                 now,
                 sender_id,
@@ -513,6 +642,8 @@ class TrailStore:
             )
         if outcome == "dead":
             return f"{event} Your party has perished at mile {distance}. RESET to try again."
+        if pending_event:
+            return f"{event} Day {day}; {distance}/{TRAIL_END}mi."
         return f"{event} Day {day}: {distance}/{TRAIL_END}mi, food {food}lb, health {health}. GO/HUNT/REST."
 
     def _resolve_river(
@@ -560,6 +691,75 @@ class TrailStore:
         if outcome == "dead":
             return result + " Your party has perished. RESET to try again."
         return result + f" Day {int(state['day']) + days}. Send GO to continue west."
+
+    @staticmethod
+    def _resolve_illness(
+        connection: sqlite3.Connection,
+        sender_id: str,
+        state: dict[str, object],
+        choice: str,
+        now: int,
+    ) -> str:
+        _, illness, damage_text = str(state["pending_event"]).split(":")
+        damage = int(damage_text)
+        medicine = int(state["medicine"])
+        health = int(state["health"])
+        if choice == "medicine":
+            if medicine < 1:
+                return f"No medicine remains. ENDURE the {illness} or find supplies first."
+            medicine -= 1
+            result = f"Medicine prevents {illness}; 1 bottle used. Health {health}."
+        else:
+            health = max(0, health - damage)
+            result = f"The party endures {illness}; health falls by {damage} to {health}."
+        outcome = "dead" if health <= 0 else "traveling"
+        connection.execute(
+            "UPDATE sessions SET medicine=?,health=?,pending_event='',outcome=?,updated_at=? "
+            "WHERE sender_id=?",
+            (medicine, health, outcome, now, sender_id),
+        )
+        if outcome == "dead":
+            return result + " Your party has perished. RESET to try again."
+        return result + " Send GO to continue west."
+
+    @staticmethod
+    def _resolve_trade(
+        connection: sqlite3.Connection,
+        sender_id: str,
+        state: dict[str, object],
+        choice: str,
+        now: int,
+    ) -> str:
+        _, trader_index, item, amount_text, price_text = str(state["pending_event"]).split(":")
+        trader = PRAIRIE_TRADERS[int(trader_index)]
+        amount = int(amount_text)
+        price = int(price_text)
+        if item not in {"food", "ammo", "medicine"}:
+            connection.execute(
+                "UPDATE sessions SET pending_event='',updated_at=? WHERE sender_id=?",
+                (now, sender_id),
+            )
+            return "The trader's offer was unreadable and has been cleared. Send GO."
+        if choice == "pass":
+            connection.execute(
+                "UPDATE sessions SET pending_event='',updated_at=? WHERE sender_id=?",
+                (now, sender_id),
+            )
+            return f"You pass {trader}'s offer. Send GO to continue west."
+        money = int(state["money"])
+        if money < price:
+            return f"{trader} asks ${price}; you have ${money}. Send PASS."
+        new_total = int(state[item]) + amount
+        connection.execute(
+            f"UPDATE sessions SET {item}=?,money=?,pending_event='',updated_at=? "
+            "WHERE sender_id=?",
+            (new_total, money - price, now, sender_id),
+        )
+        unit = "lb food" if item == "food" else item
+        return (
+            f"Traded ${price} to {trader} for {amount} {unit}. "
+            f"Cash ${money-price}. Send GO."
+        )
 
     def _beacon(
         self, connection: sqlite3.Connection, sender_id: str, state: dict[str, object], now: int
@@ -609,12 +809,16 @@ class TrailStore:
     ) -> str:
         day = int(state["day"]) + 3
         food = max(0, int(state["food"]) - PARTY_SIZE * 2 * 3)
-        health = min(100, int(state["health"]) + 14)
+        medicine_aided = bool(state["medicine_care"])
+        recovery = 17 if medicine_aided else 14
+        health = min(100, int(state["health"]) + recovery)
         connection.execute(
-            "UPDATE sessions SET day=?,food=?,health=?,turns=turns+1,updated_at=? WHERE sender_id=?",
+            "UPDATE sessions SET day=?,food=?,health=?,medicine_care=0,turns=turns+1,"
+            "updated_at=? WHERE sender_id=?",
             (day, food, health, now, sender_id),
         )
-        return f"Rested 3 days. Day {day}; food {food}lb; health {health}."
+        aid = " Medicine aided recovery." if medicine_aided else ""
+        return f"Rested 3 days. Day {day}; food {food}lb; health {health}.{aid}"
 
 
 def fit_utf8(text: str, max_bytes: int) -> str:

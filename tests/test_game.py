@@ -97,6 +97,120 @@ def test_trading_post_at_independence(tmp_path):
     assert "Ammo 70; cash $376" in game.handle("buyer", "buy ammo 20", timestamp=4)
 
 
+def test_medicine_can_be_bought_used_and_aids_recovery(tmp_path):
+    path = tmp_path / "trail.db"
+    game = TrailStore(path)
+    game.handle("patient", "start", timestamp=1)
+    assert "Medicine 2; cash $370" in game.handle(
+        "patient", "buy medicine 2", timestamp=2
+    )
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE sessions SET health=70 WHERE sender_id='patient'"
+        )
+
+    assert "Health 73; 1 remain" in game.handle("patient", "medicine", timestamp=3)
+    rested = game.handle("patient", "rest", timestamp=4)
+    assert "health 90" in rested
+    assert "Medicine aided recovery" in rested
+    with sqlite3.connect(path) as connection:
+        medicine, care = connection.execute(
+            "SELECT medicine,medicine_care FROM sessions WHERE sender_id='patient'"
+        ).fetchone()
+    assert medicine == 1
+    assert care == 0
+
+
+def test_medicine_prevents_illness_or_party_can_endure(tmp_path):
+    path = tmp_path / "trail.db"
+    game = TrailStore(path)
+    game.handle("prepared", "start", timestamp=1)
+    game.handle("unprepared", "start", timestamp=1)
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE sessions SET health=80,medicine=1,"
+            "pending_event='illness:dysentery:12' WHERE sender_id='prepared'"
+        )
+        connection.execute(
+            "UPDATE sessions SET health=80,pending_event='illness:dysentery:12' "
+            "WHERE sender_id='unprepared'"
+        )
+
+    prevented = game.handle("prepared", "medicine", timestamp=2)
+    assert "Medicine prevents dysentery" in prevented
+    endured = game.handle("unprepared", "endure", timestamp=2)
+    assert "health falls by 12 to 68" in endured
+
+    with sqlite3.connect(path) as connection:
+        prepared = connection.execute(
+            "SELECT health,medicine,pending_event FROM sessions WHERE sender_id='prepared'"
+        ).fetchone()
+        unprepared = connection.execute(
+            "SELECT health,pending_event FROM sessions WHERE sender_id='unprepared'"
+        ).fetchone()
+    assert prepared == (80, 0, "")
+    assert unprepared == (68, "")
+
+
+def test_trail_traders_offer_food_ammo_and_medicine(tmp_path):
+    path = tmp_path / "trail.db"
+    game = TrailStore(path, max_active_players=4)
+    offers = {
+        "food-buyer": ("trade:0:food:100:15", "100 lb food", 1100, 385),
+        "ammo-buyer": ("trade:1:ammo:20:8", "20 ammo", 70, 392),
+        "medicine-buyer": ("trade:2:medicine:1:10", "1 medicine", 1, 390),
+    }
+    for sender, (pending, _, _, _) in offers.items():
+        game.handle(sender, "start", timestamp=1)
+        with sqlite3.connect(path) as connection:
+            connection.execute(
+                "UPDATE sessions SET pending_event=? WHERE sender_id=?",
+                (pending, sender),
+            )
+
+    for sender, (_, description, expected_total, expected_money) in offers.items():
+        reply = game.handle(sender, "trade", timestamp=2)
+        assert description in reply
+        item = sender.removesuffix("-buyer")
+        with sqlite3.connect(path) as connection:
+            total, money, pending = connection.execute(
+                f"SELECT {item},money,pending_event FROM sessions WHERE sender_id=?",
+                (sender,),
+            ).fetchone()
+        assert (total, money, pending) == (expected_total, expected_money, "")
+
+
+def test_trail_trade_can_be_declined(tmp_path):
+    path = tmp_path / "trail.db"
+    game = TrailStore(path)
+    game.handle("walker", "start", timestamp=1)
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE sessions SET pending_event='trade:3:food:100:15' "
+            "WHERE sender_id='walker'"
+        )
+    assert "pass Silas Webb's offer" in game.handle("walker", "pass", timestamp=2)
+    with sqlite3.connect(path) as connection:
+        assert connection.execute(
+            "SELECT pending_event FROM sessions WHERE sender_id='walker'"
+        ).fetchone()[0] == ""
+
+
+def test_forage_spends_a_day_and_may_find_herbal_medicine(tmp_path):
+    path = tmp_path / "trail.db"
+    game = TrailStore(path, random_seed=1848)
+    game.handle("forager", "start", timestamp=1)
+    reply = game.handle("forager", "forage", timestamp=2)
+    assert "Foraged 1 day" in reply
+    with sqlite3.connect(path) as connection:
+        day, food, medicine = connection.execute(
+            "SELECT day,food,medicine FROM sessions WHERE sender_id='forager'"
+        ).fetchone()
+    assert day == 2
+    assert food == 985
+    assert medicine in {0, 1, 2}
+
+
 def test_trading_requires_a_post_and_enough_cash(tmp_path):
     path = tmp_path / "trail.db"
     game = TrailStore(path)
