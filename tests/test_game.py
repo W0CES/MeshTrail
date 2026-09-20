@@ -1,7 +1,14 @@
 import sqlite3
 
 import meshtrail_plugin.game as game_module
-from meshtrail_plugin.game import PLAYER_GUIDE_URL, PRAIRIE_MESH_OPERATORS, TrailStore, fit_utf8
+from meshtrail_plugin.game import (
+    HELP_SUMMARY,
+    HELP_TOPICS,
+    PLAYER_GUIDE_URL,
+    PRAIRIE_MESH_OPERATORS,
+    TrailStore,
+    fit_utf8,
+)
 
 
 def test_new_player_and_persistent_progress(tmp_path):
@@ -57,6 +64,25 @@ def test_guide_is_available_without_starting_a_game(tmp_path):
     reply = game.handle("new-player", "guide", timestamp=1)
     assert PLAYER_GUIDE_URL in reply
     assert len(reply.encode("utf-8")) <= 145
+
+
+def test_help_topics_work_before_and_during_a_game(tmp_path):
+    game = TrailStore(tmp_path / "trail.db")
+
+    assert "HELP <command>" in game.handle("new-player", "help", timestamp=1)
+    assert "BUY FOOD" in game.handle("new-player", "help buy", timestamp=2)
+    assert "STRENUOUS" in game.handle("new-player", "HELP PACE", timestamp=3)
+    assert "FILLING" in game.handle("new-player", "help rations", timestamp=4)
+
+    game.handle("player", "start", timestamp=1)
+    assert "safer than FORD" in game.handle("player", "help caulk", timestamp=2)
+    assert "Shortcut: INV" in game.handle("player", "help inv", timestamp=3)
+    assert "No help is available" in game.handle("player", "help telegraphy", timestamp=4)
+
+
+def test_every_help_reply_fits_mesh_packet_budget():
+    assert len(HELP_SUMMARY.encode("utf-8")) <= 145
+    assert all(len(reply.encode("utf-8")) <= 145 for reply in HELP_TOPICS.values())
 
 
 def test_inactive_saves_expire_after_retention_period(tmp_path, monkeypatch):
@@ -196,6 +222,115 @@ def test_trail_trade_can_be_declined(tmp_path):
         ).fetchone()[0] == ""
 
 
+def test_choice_based_trail_hazards_cost_time_and_supplies(tmp_path):
+    path = tmp_path / "trail.db"
+    game = TrailStore(path, max_active_players=3, random_seed=1848)
+    hazards = {
+        "bison": ("hazard:bison", "wait"),
+        "storm": ("hazard:storm", "camp"),
+        "wagon": ("hazard:breakdown", "spare"),
+    }
+    for sender, (pending, _) in hazards.items():
+        game.handle(sender, "start", timestamp=1)
+        with sqlite3.connect(path) as connection:
+            connection.execute(
+                "UPDATE sessions SET pending_event=? WHERE sender_id=?",
+                (pending, sender),
+            )
+
+    assert "waits safely" in game.handle("bison", "wait", timestamp=2)
+    assert "camps safely" in game.handle("storm", "camp", timestamp=2)
+    assert "spare part repairs" in game.handle("wagon", "spare", timestamp=2)
+
+    with sqlite3.connect(path) as connection:
+        bison = connection.execute(
+            "SELECT day,food,pending_event FROM sessions WHERE sender_id='bison'"
+        ).fetchone()
+        storm = connection.execute(
+            "SELECT day,food,pending_event FROM sessions WHERE sender_id='storm'"
+        ).fetchone()
+        wagon = connection.execute(
+            "SELECT day,food,parts,pending_event FROM sessions WHERE sender_id='wagon'"
+        ).fetchone()
+    assert bison == (3, 970, "")
+    assert storm == (3, 970, "")
+    assert wagon == (2, 985, 2, "")
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE sessions SET pending_event='hazard:bison' WHERE sender_id='bison'"
+        )
+        connection.execute(
+            "UPDATE sessions SET pending_event='hazard:storm' WHERE sender_id='storm'"
+        )
+        connection.execute(
+            "UPDATE sessions SET pending_event='hazard:breakdown' WHERE sender_id='wagon'"
+        )
+    risky_replies = (
+        game.handle("bison", "detour", timestamp=3),
+        game.handle("storm", "push", timestamp=3),
+        game.handle("wagon", "repair", timestamp=3),
+    )
+    assert all(reply and "Send GO" in reply for reply in risky_replies)
+    assert all(len(reply.encode("utf-8")) <= 145 for reply in risky_replies if reply)
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE sessions SET pending_event='hazard:breakdown' WHERE sender_id='wagon'"
+        )
+    abandoned = game.handle("wagon", "abandon", timestamp=4)
+    assert "Supplies are abandoned" in abandoned
+    assert len(abandoned.encode("utf-8")) <= 145
+
+
+def test_breakdown_without_spare_requires_another_choice(tmp_path):
+    path = tmp_path / "trail.db"
+    game = TrailStore(path)
+    game.handle("wagon", "start", timestamp=1)
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE sessions SET parts=0,pending_event='hazard:breakdown' "
+            "WHERE sender_id='wagon'"
+        )
+
+    assert "Choose REPAIR or ABANDON" in game.handle("wagon", "spare", timestamp=2)
+    assert "broken wagon" in game.handle("wagon", "status", timestamp=3)
+
+
+def test_trail_event_chance_increases_westward():
+    assert TrailStore._event_chance(0) == 0.42
+    assert TrailStore._event_chance(1000) == 0.52
+    assert TrailStore._event_chance(2000) == 0.62
+
+
+def test_rare_jackalope_sighting_lifts_health(tmp_path, monkeypatch):
+    class JackalopeRoll:
+        @staticmethod
+        def randint(low, high):
+            return 0 if low <= 0 <= high else low
+
+        @staticmethod
+        def random():
+            return 0.0
+
+        @staticmethod
+        def randrange(_stop):
+            return 13 if _stop == 16 else 0
+
+    path = tmp_path / "trail.db"
+    game = TrailStore(path)
+    game.handle("rabbit", "start", timestamp=1)
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE sessions SET distance=130,health=90 WHERE sender_id='rabbit'"
+        )
+    monkeypatch.setattr(game, "_rng", lambda _sender, _turns, _action: JackalopeRoll())
+
+    reply = game.handle("rabbit", "go", timestamp=2)
+    assert "elusive jackalope" in reply
+    assert "health 95" in reply
+
+
 def test_forage_spends_a_day_and_may_find_herbal_medicine(tmp_path):
     path = tmp_path / "trail.db"
     game = TrailStore(path, random_seed=1848)
@@ -241,6 +376,22 @@ def test_mesh_telegraph_commands_use_cells(tmp_path):
     assert "BEACON ACK" in beacon
     assert any(operator in beacon for operator in PRAIRIE_MESH_OPERATORS)
     assert "cells 95%" in game.handle("player", "ping", timestamp=4)
+
+
+def test_community_operator_names_are_available_and_fit_replies():
+    added_names = {
+        "Yellowcooln",
+        "Treehouse〰𑃰𑃰",
+        "RightUp",
+        "Meaningless",
+        "timmo_3.14",
+    }
+    assert added_names <= set(PRAIRIE_MESH_OPERATORS)
+    replies = [
+        f"BEACON ACK 5/5 via {operator}. Great Platte River Road is 2000mi west. Cells 100%."
+        for operator in PRAIRIE_MESH_OPERATORS
+    ]
+    assert all(len(reply.encode("utf-8")) <= 145 for reply in replies)
 
 
 def test_fort_kearny_contains_nebraska_mesh_easter_egg(tmp_path):
@@ -289,4 +440,3 @@ def test_fit_utf8_obeys_packet_budget():
     result = fit_utf8("prairie " * 100, 145)
     assert len(result.encode("utf-8")) <= 145
     assert result.endswith("...")
-

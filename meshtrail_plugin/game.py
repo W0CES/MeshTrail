@@ -25,6 +25,61 @@ PLAYER_GUIDE_URL = "https://github.com/W0CES/MeshTrail/blob/main/PLAYER_GUIDE.md
 PACE_MILES = {"steady": 95, "strenuous": 120, "grueling": 145}
 RATION_FOOD = {"filling": 3, "meager": 2, "bare": 1}
 ALIASES = {"travel": "go", "continue": "go", "s": "status", "inv": "supplies", "?": "help"}
+HELP_ALIASES = {
+    "travel": "go",
+    "continue": "go",
+    "s": "status",
+    "inv": "supplies",
+    "radio": "ping",
+    "rivers": "river",
+    "offers": "trade",
+    "new": "reset",
+    "/reset": "reset",
+    "/new": "reset",
+    "?": "help",
+    "encounters": "encounter",
+    "hazard": "encounter",
+    "hazards": "encounter",
+}
+HELP_SUMMARY = (
+    "Send HELP <command>. START GO STATUS SUPPLIES SHOP BUY PING BEACON HUNT FORAGE "
+    "REST MEDICINE PACE RATIONS GUIDE RESET RIVER TRADE ENCOUNTER."
+)
+HELP_TOPICS = {
+    "help": "HELP lists commands. Send HELP followed by a command for its use, choices, and an example. Example: HELP PACE.",
+    "start": "START forms a five-person wagon party at Independence. To replace an existing journey and begin again, use RESET.",
+    "go": "GO travels one turn using your PACE and RATIONS. It may reach a landmark or trigger a river, illness, or trader. Also: TRAVEL, CONTINUE.",
+    "status": "STATUS shows the day, miles traveled, food, health, and next landmark or pending choice. Shortcut: S.",
+    "supplies": "SUPPLIES shows food, ammo, medicine, parts, cash, telegraph cells, and aerial condition. Shortcut: INV.",
+    "shop": "SHOP lists prices and cash at Independence or a fort. Elsewhere it tells you where the nearest buying opportunities are.",
+    "buy": "At a post use BUY FOOD <10-5000>, BUY AMMO <10-500>, or BUY MEDICINE <1-20>. Food and ammo use multiples of 10.",
+    "ping": "PING checks telegraph cells, aerial condition, current location, and distance to the next mesh relay.",
+    "beacon": "BEACON sends a trail report through the LoRa Aether Telegraph. It uses 5% of the telegraph cells.",
+    "hunt": "HUNT spends 5 ammo and 2 days to gain food. The party also eats its selected RATIONS during those days.",
+    "forage": "FORAGE spends 1 day and that day's rations searching for herbal medicine. You may find 0, 1, or 2 bottles.",
+    "rest": "REST spends 3 days and food to recover health. Recently used MEDICINE improves recovery by about 20%.",
+    "medicine": "MEDICINE uses 1 bottle to restore 3 health and improve the next REST. During an illness choice, it prevents the illness.",
+    "pace": "PACE sets travel: STEADY (~95mi), STRENUOUS (~120mi, small health cost), or GRUELING (~145mi, larger cost). Example: PACE STEADY.",
+    "rations": "RATIONS sets daily food per traveler: FILLING 3lb (may heal), MEAGER 2lb, or BARE 1lb (hurts health). Example: RATIONS MEAGER.",
+    "guide": "GUIDE returns a link to the complete beginner's Player Guide. It works before or during a journey.",
+    "reset": "RESET permanently replaces your current journey with a new wagon party at Independence. Aliases: NEW, /RESET, /NEW.",
+    "river": "At a river choose FORD, CAULK, or FERRY. Ask HELP FORD, HELP CAULK, or HELP FERRY to compare the choices.",
+    "ford": "FORD crosses a waiting river in 1 day for free. Success depends on depth; failure can cost food and health.",
+    "caulk": "CAULK crosses a waiting river in 2 days for free. It is safer than FORD, but failure can still cost food and health.",
+    "ferry": "FERRY crosses a waiting river safely in 1 day for $25. If you lack $25, choose FORD or CAULK.",
+    "trade": "When a traveler makes an offer, TRADE buys the offered food, ammo, or medicine. Send PASS to decline it.",
+    "pass": "PASS declines a waiting traveler's offer without spending cash. You can then send GO to continue.",
+    "endure": "During an illness choice, ENDURE saves medicine but accepts the stated health loss. MEDICINE prevents it instead.",
+    "encounter": "Trail hazards pause travel for a choice. Bison: WAIT/DETOUR. Storm: CAMP/PUSH. Broken wagon: SPARE/REPAIR/ABANDON.",
+    "wait": "WAIT lets a bison herd pass safely. It costs 2 days and the party's selected rations.",
+    "detour": "DETOUR spends 1 day going around a bison herd. A rough detour may damage a spare part or cost health.",
+    "camp": "CAMP waits out a prairie storm safely. It costs 2 days and rations, with possible light aerial wear.",
+    "push": "PUSH travels through a prairie storm in 1 day. It may avoid delay, but risks health and serious aerial damage.",
+    "spare": "SPARE uses 1 wagon part and 1 day to fix a breakdown safely. If no parts remain, choose REPAIR or ABANDON.",
+    "repair": "REPAIR attempts a wagon fix without a spare. It costs at least 2 days; failure costs another day and some health.",
+    "abandon": "ABANDON resolves a broken wagon immediately by discarding some food and ammunition to salvage the wagon.",
+    "jackalope": "The elusive JACKALOPE is a rare trail sighting. It requires no choice and lifts the party's spirits and health.",
+}
 LANDMARKS = (
     (0, "Independence"),
     (210, "Great Platte River Road"),
@@ -56,6 +111,11 @@ PRAIRIE_MESH_OPERATORS = (
     "NADPEATER",
     "Florence OMA",
     "Tammy",
+    "Yellowcooln",
+    "Treehouse〰𑃰𑃰",
+    "RightUp",
+    "Meaningless",
+    "timmo_3.14",
 )
 PRAIRIE_TRADERS = (
     "Ada Mercer",
@@ -190,6 +250,8 @@ class TrailStore:
                 normalized = "start"
             if normalized == "guide":
                 return f"MeshTrail beginner guide: {PLAYER_GUIDE_URL}"
+            if normalized == "help" or normalized.startswith("help "):
+                return self._help(normalized)
             if row is None:
                 if normalized not in {"", "start"}:
                     return "MESH TRAIL: Send START to form a wagon party. HELP lists commands."
@@ -209,11 +271,6 @@ class TrailStore:
             state = dict(row)
             if normalized in {"", "start", "status"}:
                 return self._status(state)
-            if normalized == "help":
-                return (
-                    "GO STATUS SUPPLIES SHOP BUY PING BEACON HUNT FORAGE REST MEDICINE "
-                    "PACE RATIONS GUIDE RESET. Rivers: FORD/CAULK/FERRY. Offers: TRADE/PASS."
-                )
             if normalized == "supplies":
                 return (
                     f"Food {state['food']}lb; ammo {state['ammo']}; medicine "
@@ -248,6 +305,23 @@ class TrailStore:
                     if normalized in {"trade", "pass"}:
                         return self._resolve_trade(connection, sender_id, state, normalized, now)
                     return "A trail trader waits for your answer. Send TRADE or PASS."
+                if pending.startswith("hazard:"):
+                    choices = {
+                        "bison": {"wait", "detour"},
+                        "storm": {"camp", "push"},
+                        "breakdown": {"spare", "repair", "abandon"},
+                    }
+                    hazard = pending.partition(":")[2]
+                    if normalized in choices.get(hazard, set()):
+                        return self._resolve_hazard(
+                            connection, sender_id, state, hazard, normalized, now
+                        )
+                    prompts = {
+                        "bison": "A bison herd blocks the trail. Choose WAIT or DETOUR.",
+                        "storm": "A prairie storm bears down. Choose CAMP or PUSH.",
+                        "breakdown": "The wagon is broken. Choose SPARE, REPAIR, or ABANDON.",
+                    }
+                    return prompts.get(hazard, "The trail hazard is unclear. Send STATUS.")
             if normalized == "shop":
                 return self._shop(state)
             if normalized.startswith("buy "):
@@ -263,6 +337,17 @@ class TrailStore:
             if normalized == "go":
                 return self._travel(connection, sender_id, state, now)
             return "Unknown command. Send HELP."
+
+    @staticmethod
+    def _help(command: str) -> str:
+        if command == "help":
+            return HELP_SUMMARY
+        topic = command.partition(" ")[2].split()[0]
+        topic = HELP_ALIASES.get(topic, topic)
+        return HELP_TOPICS.get(
+            topic,
+            f"No help is available for {topic.upper()}. Send HELP for the command list.",
+        )
 
     def _claim_active_slot(
         self, connection: sqlite3.Connection, sender_id: str, now: int
@@ -327,6 +412,15 @@ class TrailStore:
                 return (
                     f"Day {state['day']}: {trader} offers {amount} {item} for ${price}. "
                     "TRADE or PASS."
+                )
+            if pending == "hazard:bison":
+                return f"Day {state['day']}: a bison herd blocks the trail. Choose WAIT or DETOUR."
+            if pending == "hazard:storm":
+                return f"Day {state['day']}: prairie storm approaching. Choose CAMP or PUSH."
+            if pending == "hazard:breakdown":
+                return (
+                    f"Day {state['day']}: broken wagon; {state['parts']} spare parts. "
+                    "Choose SPARE, REPAIR, or ABANDON."
                 )
         next_name, remaining = TrailStore._next_landmark(int(state["distance"]))
         return (
@@ -483,6 +577,11 @@ class TrailStore:
         material = f"{self.random_seed}:{sender_id}:{turns}:{action}".encode()
         return random.Random(int.from_bytes(hashlib.sha256(material).digest()[:8], "big"))
 
+    @staticmethod
+    def _event_chance(distance: int) -> float:
+        """Raise the chance of trail trouble from 42% to 62% as Oregon nears."""
+        return 0.42 + 0.20 * min(TRAIL_END, max(0, distance)) / TRAIL_END
+
     def _travel(
         self, connection: sqlite3.Connection, sender_id: str, state: dict[str, object], now: int
     ) -> str:
@@ -520,27 +619,32 @@ class TrailStore:
         aerial = int(state["aerial"])
         event = "Clear trail."
         pending_event = ""
+        preserve_event = False
 
         if food == 0:
             health -= 18
             event = "Food ran out; the party is starving."
-        elif rng.random() < 0.42:
+        elif rng.random() < self._event_chance(int(state["distance"])):
             roll = rng.randrange(7)
-            if roll == 0:
+            jackalope_roll = self._rng(
+                sender_id, int(state["turns"]), "jackalope-sighting"
+            ).randrange(16)
+            if jackalope_roll == 13:
+                health = min(100, health + 3)
+                preserve_event = True
+                event = (
+                    "An elusive jackalope watches from a ridge, then bounds west. "
+                    "Spirits rise; health +3."
+                )
+            elif roll == 0:
                 pending_event = "illness:dysentery:12"
                 event = "Dysentery threatens. MEDICINE prevents it; ENDURE loses 12 health."
             elif roll == 1:
-                if parts:
-                    parts -= 1
-                    event = "A wagon wheel broke; one spare used."
-                else:
-                    miles //= 2
-                    health -= 8
-                    event = "Broken wheel and no spare; progress slowed."
+                pending_event = "hazard:breakdown"
+                event = "A wagon wheel splinters. Choose SPARE, REPAIR, or ABANDON."
             elif roll == 2:
-                lost = min(food, rng.randint(25, 70))
-                food -= lost
-                event = f"A storm spoiled {lost}lb of food."
+                pending_event = "hazard:storm"
+                event = "A prairie storm bears down. Choose CAMP or PUSH."
             elif roll == 3:
                 miles += 20
                 event = "Good weather and a firm trail!"
@@ -560,7 +664,13 @@ class TrailStore:
                 aerial = max(0, aerial - damage)
                 event = f"Lightning damaged the mesh aerial by {damage}%."
             else:
-                if battery > 0 and aerial >= 30:
+                bison_roll = self._rng(
+                    sender_id, int(state["turns"]), "bison-herd"
+                ).random()
+                if bison_roll < 0.5:
+                    pending_event = "hazard:bison"
+                    event = "A great bison herd blocks the trail. Choose WAIT or DETOUR."
+                elif battery > 0 and aerial >= 30:
                     miles += 15
                     battery = max(0, battery - 3)
                     event = "A relay packet warned of a washout; your party found a shortcut."
@@ -577,7 +687,7 @@ class TrailStore:
             health = min(100, health + 2)
 
         distance = min(TRAIL_END, int(state["distance"]) + max(0, miles))
-        if int(state["distance"]) < 210 <= distance:
+        if not pending_event and not preserve_event and int(state["distance"]) < 210 <= distance:
             event = (
                 "The trail joins Nebraska's broad Platte River, the Great Platte River Road "
                 "stretching west."
@@ -591,7 +701,9 @@ class TrailStore:
         if crossed_relays:
             battery = 100
             aerial = min(100, aerial + 25)
-            if 300 in crossed_relays:
+            if pending_event or preserve_event:
+                pass
+            elif 300 in crossed_relays:
                 event = (
                     "Fort Kearny: Nebraska Mesh operators DOS_ and Nightcrawler service your set. "
                     "'One relay at a time.'"
@@ -604,15 +716,19 @@ class TrailStore:
             else:
                 event += " Fort relay: cells charged and aerial serviced."
         shop_location = max(crossed_posts) if crossed_posts else -1
-        if pending_event:
+        if preserve_event:
             pass
         elif shop_location == 300:
+            pending_event = ""
             event = (
                 "Fort Kearny: SHOP open. Nebraska Mesh operators DOS_ and Nightcrawler "
                 "service your set."
             )
         elif shop_location >= 0:
+            pending_event = ""
             event = f"{TRADING_POSTS[shop_location]}: trading post open. Send SHOP."
+        elif pending_event:
+            pass
         day = int(state["day"]) + days
         outcome = "won" if distance >= TRAIL_END else ("dead" if health <= 0 else "traveling")
         health = max(0, min(100, health))
@@ -645,6 +761,104 @@ class TrailStore:
         if pending_event:
             return f"{event} Day {day}; {distance}/{TRAIL_END}mi."
         return f"{event} Day {day}: {distance}/{TRAIL_END}mi, food {food}lb, health {health}. GO/HUNT/REST."
+
+    def _resolve_hazard(
+        self,
+        connection: sqlite3.Connection,
+        sender_id: str,
+        state: dict[str, object],
+        hazard: str,
+        choice: str,
+        now: int,
+    ) -> str:
+        rng = self._rng(sender_id, int(state["turns"]), f"hazard:{hazard}:{choice}")
+        days = 0
+        food = int(state["food"])
+        ammo = int(state["ammo"])
+        parts = int(state["parts"])
+        health = int(state["health"])
+        aerial = int(state["aerial"])
+
+        if hazard == "bison":
+            if choice == "wait":
+                days = 2
+                result = "The party waits safely for the bison herd to pass."
+            else:
+                days = 1
+                if rng.random() < 0.68:
+                    result = "The wagon finds a rough but safe detour around the bison herd."
+                elif parts:
+                    parts -= 1
+                    result = "The detour breaks a wagon fitting; 1 spare part is used."
+                else:
+                    health -= 8
+                    result = "With no spare part, the rough detour costs 8 health."
+        elif hazard == "storm":
+            if choice == "camp":
+                days = 2
+                wear = rng.randint(0, 4)
+                aerial = max(0, aerial - wear)
+                result = "The party camps safely until the prairie storm passes."
+                if wear:
+                    result += f" Aerial wear {wear}%."
+            else:
+                days = 1
+                if rng.random() < 0.55:
+                    damage = rng.randint(8, 14)
+                    aerial_damage = rng.randint(10, 25)
+                    health -= damage
+                    aerial = max(0, aerial - aerial_damage)
+                    result = (
+                        f"The storm batters the wagon: health -{damage}; "
+                        f"aerial -{aerial_damage}%."
+                    )
+                else:
+                    result = "The wagon pushes through the storm without serious damage."
+        elif hazard == "breakdown":
+            if choice == "spare":
+                if parts < 1:
+                    return "No spare parts remain. Choose REPAIR or ABANDON."
+                days = 1
+                parts -= 1
+                result = "A spare part repairs the wagon safely."
+            elif choice == "repair":
+                days = 2
+                if rng.random() < 0.65:
+                    result = "The party repairs the wagon without using a spare part."
+                else:
+                    days = 3
+                    health -= 6
+                    result = "The improvised repair slips; another day passes and health falls by 6."
+            else:
+                lost_food = min(food, rng.randint(120, 220))
+                lost_ammo = min(ammo, rng.randint(10, 25))
+                food -= lost_food
+                ammo -= lost_ammo
+                result = (
+                    f"Supplies are abandoned to salvage the wagon: {lost_food}lb food and "
+                    f"{lost_ammo} ammo lost."
+                )
+        else:
+            return "The trail hazard cannot be resolved. Send STATUS."
+
+        food_needed = PARTY_SIZE * RATION_FOOD[str(state["rations"])] * days
+        if food < food_needed:
+            food = 0
+            health -= 8
+            result += " Food runs out; health falls by 8."
+        else:
+            food -= food_needed
+        health = max(0, min(100, health))
+        outcome = "dead" if health <= 0 else "traveling"
+        day = int(state["day"]) + days
+        connection.execute(
+            "UPDATE sessions SET day=?,food=?,ammo=?,parts=?,health=?,aerial=?,"
+            "pending_event='',turns=turns+1,outcome=?,updated_at=? WHERE sender_id=?",
+            (day, food, ammo, parts, health, aerial, outcome, now, sender_id),
+        )
+        if outcome == "dead":
+            return result + " Your party has perished. RESET to try again."
+        return result + f" Day {day}; food {food}lb; health {health}. Send GO."
 
     def _resolve_river(
         self,
@@ -834,4 +1048,3 @@ def fit_utf8(text: str, max_bytes: int) -> str:
         except UnicodeDecodeError:
             clipped = clipped[:-1]
     return suffix[:max_bytes]
-

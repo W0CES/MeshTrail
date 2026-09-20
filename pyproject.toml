@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openhop-meshtrail-plugin"
-version = "0.4.0"
+version = "0.5.0"
 description = "An Oregon Trail-inspired game for MeshCore direct messages"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -44,4 +44,3 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-

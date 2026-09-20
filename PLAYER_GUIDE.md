@@ -65,6 +65,9 @@ that retention period from the MeshTrail settings page.
 | `CAULK` | Prepares the wagon and crosses more cautiously. It takes two days. |
 | `FERRY` | Pays $25 for a safe, one-day crossing. |
 | `HELP` | Shows the in-game command list. |
+| `HELP <command>` | Explains one command, including its choices and an example when useful. Try `HELP PACE`, `HELP BUY`, or `HELP RIVER`. |
+| `HELP ENCOUNTER` | Explains the choices for bison, prairie storms, and wagon breakdowns. |
+| `HELP JACKALOPE` | Describes a rare and mysterious trail sighting. |
 | `RESET` | Abandons the current journey and starts a fresh one. |
 | `GUIDE` | Returns a link to this beginner guide. This works before starting a journey. |
 
@@ -100,13 +103,26 @@ preventive treatment consumes one bottle.
 
 ### Keep moving, but watch food and health
 
-`GO` consumes seven days of rations. Travel can cause illness, storms, broken wheels, spoiled
-food, or aerial damage. A broken wheel uses one spare part when you have one; without a spare,
-the party loses progress and health.
+`GO` consumes seven days of rations. Travel can cause illness, storms, broken wagons, animal
+encounters, trader offers, or aerial damage. Trail trouble becomes more likely farther west.
 
 If food reaches zero, the party begins to starve. If health reaches zero, the journey ends.
 Use `HUNT` when food is getting low and you have at least 5 ammunition. Use `REST` after a bad
 event or when health needs rebuilding, but remember that the party still eats while resting.
+
+### Respond to trail encounters
+
+Some events pause the journey until you choose what to do:
+
+- A **bison herd** can be handled with `WAIT`, which safely costs two days and rations, or
+  `DETOUR`, which costs one day but can damage a part or reduce health.
+- A **prairie storm** can be handled with `CAMP`, which safely costs two days and rations, or
+  `PUSH`, which costs one day but risks health and serious aerial damage.
+- A **broken wagon** can be handled with `SPARE`, which uses one part and one day; `REPAIR`,
+  which risks extra time and health; or `ABANDON`, which immediately sacrifices food and ammo.
+
+Very rarely, the party may glimpse an elusive jackalope. No choice is required; the mysterious
+sighting lifts everyone's spirits and restores a little health.
 
 ### Choose a pace and rations
 
@@ -163,4 +179,3 @@ arrival and lets you replay with `RESET`.
 If the party perishes, send `RESET` to abandon that run and form a new party. `RESET` also works
 if you simply want to try a different strategy, but it permanently replaces the current saved
 journey.
-

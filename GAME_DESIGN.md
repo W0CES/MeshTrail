@@ -70,6 +70,8 @@ the Willamette Valley. Operators consider it a sign that a message has found a c
 
 The rabbit should remain unexplained. It is not a talking character or a modern logo dropped into
 the setting; it is a recurring visual motif and a quiet reward for players who know openHop.
+On rare occasions, travelers may glimpse an elusive jackalope watching from a ridge before it
+bounds west. The sighting lifts the party's spirits, but its meaning is never explained.
 
 ## Nebraska Mesh Easter egg
 
@@ -91,12 +93,14 @@ events can let each character deliver different warnings, rumors, repair help, o
 
 Other public Nebraska Mesh node names appear more lightly as distant signatures returned by
 `BEACON`. The initial rotation is **Applesauce**, **Heartwood Observer**, **CourtHouse**,
-**NADPEATER**, **Florence OMA**, and **Tammy**. They are treated as telegraph handles rather than
-fully defined characters, leaving room for their real operators to suggest better cameos later.
+**NADPEATER**, **Florence OMA**, and **Tammy**. Nebraska Mesh handles **Meaningless** and
+**timmo_3.14** also appear in the rotation. The openHop developer handles **Yellowcooln**,
+**Treehouse〰𑃰𑃰**, and **RightUp** acknowledge traffic as fellow Aether Telegraph operators. All
+are treated as telegraph handles rather than fully defined characters, leaving room for their
+real operators to suggest better cameos later.
 
 This is a quiet homage to the real volunteer-run Nebraska Mesh community and its mission to keep
 Nebraska connected one node at a time. It should appear as local color, not an advertisement or
 modern organization transported wholesale into the story. Fort Kearny, the Platte River,
 Chimney Rock, Scotts Bluff, and other Nebraska trail locations should receive especially rich
 events as the game grows.
-

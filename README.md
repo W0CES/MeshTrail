@@ -35,9 +35,14 @@ Each sender prefix gets an independent SQLite-backed wagon party. Send one comma
 - `PACE steady|strenuous|grueling`
 - `RATIONS filling|meager|bare`
 - `FORD`, `CAULK`, or `FERRY` - resolve a river crossing when the trail reaches one
+- `WAIT` or `DETOUR` - respond to a bison herd
+- `CAMP` or `PUSH` - respond to a prairie storm
+- `SPARE`, `REPAIR`, or `ABANDON` - resolve a broken wagon
 - `RESET` - abandon the current run and start over
 - `GUIDE` - return the beginner guide link
 - `HELP` - show the command list
+- `HELP <command>` - explain one command, its choices, and useful examples
+- Choice-based hazards include bison herds, prairie storms, and wagon breakdowns
 
 Travel events are repeatable for a given player, turn, and configured seed. MeshCore delivery
 retries are deduplicated so the same radio message cannot advance a party twice.
@@ -64,7 +69,7 @@ On Windows, use `.venv\Scripts\python` and `.venv\Scripts\pytest`.
 ## openHop installation
 
 Build the wheel with `python -m build`. The installable file will be created in `dist/` with a
-name similar to `openhop_meshtrail_plugin-0.4.0-py3-none-any.whl`.
+name similar to `openhop_meshtrail_plugin-0.5.0-py3-none-any.whl`.
 
 To install it through the openHop dashboard:
 
@@ -136,7 +141,7 @@ first river crossing, and reopens the SQLite save from a new game instance.
 
 MeshTrail publishes installable wheels as GitHub Release assets. To publish a release, first make
 sure the version in `pyproject.toml`, `openhop-plugin.json`, and `meshtrail_plugin/__init__.py`
-matches, then create and push a canonical tag such as `v0.4.0`. The **Publish Release Wheel**
+matches, then create and push a canonical tag such as `v0.5.0`. The **Publish Release Wheel**
 workflow verifies the tag, runs the Python and Docker test suites, builds the wheel, and attaches
 both the wheel and a ZIP bundle to the matching GitHub Release. It can also be rerun manually for
 an existing tag from the repository's Actions page.
@@ -152,4 +157,3 @@ with the release wheel URL and SHA-256 checksum.
 The plugin is a supervised child process. A crash or invalid game command cannot replace or
 stop the openHop repeater. The client reconnects with bounded backoff if the Companion TCP
 connection is interrupted.
-
